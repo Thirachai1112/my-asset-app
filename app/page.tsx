@@ -1,6 +1,7 @@
 // app/page.tsx
 import Link from 'next/link'
 
+
 export default function PortalPage() {
   return (
     <main className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-6 text-slate-100">
@@ -33,6 +34,13 @@ export default function PortalPage() {
             เข้าสู่ระบบยืม-คืน <span className="ml-2 transform group-hover:translate-x-1 transition-transform">→</span>
           </div>
         </Link>
+
+<Link 
+      href="/borrows/request" 
+      className="w-full bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold py-3 px-4 rounded-xl transition-all shadow-md shadow-blue-900/30 flex items-center justify-center gap-2 active:scale-[0.98]"
+    >
+      <span>🛒</span> ส่งคำขอยืมครุภัณฑ์
+    </Link>
 
         {/* การ์ดระบบจัดการการซ่อม */}
         <Link href="/repairs" className="group bg-slate-800 hover:bg-slate-750 border border-slate-700/50 hover:border-amber-500/50 rounded-2xl p-8 transition-all duration-300 shadow-xl hover:shadow-amber-950/20 flex flex-col justify-between text-left">
