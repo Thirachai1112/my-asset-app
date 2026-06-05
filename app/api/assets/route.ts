@@ -3,18 +3,27 @@ import { createClient } from '../../../utils/supabase/server'
 
 // 1. GET: ดึงรายการครุภัณฑ์ทั้งหมด
 export async function GET() {
-  const supabase = await createClient()
-  
-  const { data: assets, error } = await supabase
-    .from('assets')
-    .select('*')
-    .order('created_at', { ascending: false }) // เอาตัวใหม่ขึ้นก่อน
+  try {
+    console.log('[GET /api/assets] Starting request...')
+    const supabase = await createClient()
+    console.log('[GET /api/assets] Supabase client created')
+    
+    const { data: assets, error } = await supabase
+      .from('assets')
+      .select('*')
+      .order('created_at', { ascending: false }) // เอาตัวใหม่ขึ้นก่อน
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    if (error) {
+      console.error('[GET /api/assets] Supabase error:', error)
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    console.log('[GET /api/assets] Success, returned', assets?.length, 'assets')
+    return NextResponse.json({ success: true, data: assets })
+  } catch (err) {
+    console.error('[GET /api/assets] Exception:', err)
+    return NextResponse.json({ error: String(err) }, { status: 500 })
   }
-
-  return NextResponse.json({ success: true, data: assets })
 }
 
 // 2. POST: เพิ่มครุภัณฑ์ชิ้นใหม่
