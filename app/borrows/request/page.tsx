@@ -46,19 +46,13 @@ export default function BorrowRequestPage() {
     const [phone, setPhone] = useState("");
     const [returnDate, setReturnDate] = useState("");
 
-    // 1. ดึงข้อมูลครุภัณฑ์จากหลังบ้านเฉพาะชิ้นที่ "ว่าง"
+    // 1. ดึงข้อมูลครุภัณฑ์ทั้งหมดจากหลังบ้าน (ไม่กรองทิ้งที่นี่ เพื่อเอาไปแยก 2 ตาราง)
     useEffect(() => {
         fetch("/api/assets")
             .then((res) => res.json())
             .then((responseBody) => {
                 const assetsArray = Array.isArray(responseBody.data) ? responseBody.data : [];
-
-                // กรองเอาเฉพาะชิ้นที่สถานะเป็น "ว่าง" หรือ "Available"
-                const availableAssets = assetsArray.filter(
-                    (item: Asset) => item.status === "ว่าง" || item.status === "Available"
-                );
-
-                setAssets(availableAssets);
+                setAssets(assetsArray); // ⚡ เก็บครุภัณฑ์ทั้งหมดลง State
                 setLoading(false);
                 setIsMounted(true); 
             })
@@ -83,16 +77,27 @@ export default function BorrowRequestPage() {
         setCart(cart.filter((item) => item.id !== id));
     };
 
-    // 4. กรองข้อมูลค้นหาจากตาราง
-    const filteredAssets = assets.filter((asset) => {
+    // 🔍 4. ตรรกะการกรองค้นหา และแยกประเภทออกเป็น 2 ตาราง
+    const searchLower = searchTerm.toLowerCase().trim();
+
+    // กรองรวมตาม Keyword ค้นหาก่อน
+    const searchedAssets = assets.filter((asset) => {
         const name = asset?.name ? asset.name.toLowerCase() : "";
         const code = asset?.asset_code ? asset.asset_code.toLowerCase() : "";
         const type = asset?.type ? asset.type.toLowerCase() : "";
         const serial = asset?.serial_number ? asset.serial_number.toLowerCase() : "";
-        const search = searchTerm.toLowerCase();
-
-        return name.includes(search) || code.includes(search) || type.includes(search) || serial.includes(search);
+        return name.includes(searchLower) || code.includes(searchLower) || type.includes(searchLower) || serial.includes(searchLower);
     });
+
+    // 🟢 ตารางบน: ครุภัณฑ์ที่พร้อมให้ยืม (สถานะ ว่าง หรือ Available)
+    const availableAssets = searchedAssets.filter(
+        (item) => item.status === "ว่าง" || item.status === "Available"
+    );
+
+    // 🔒 ตารางล่าง: ครุภัณฑ์ที่ถูกยืมอยู่ หรือไม่ว่างชั่วคราว (กำลังใช้งาน หรือ ชำรุด)
+    const borrowedAssets = searchedAssets.filter(
+        (item) => item.status !== "ว่าง" && item.status !== "Available"
+    );
 
     // 5. ส่งคำขอยืมชุดใหญ่ไปที่หลังบ้าน
     const handleSubmitBorrow = async (e: React.FormEvent) => {
@@ -143,7 +148,7 @@ export default function BorrowRequestPage() {
                     return_date: returnDate
                 },
                 cart.map(item => ({
-                    id: Number(item.id), // แปลงให้ตรง Type ตัวรับของฝั่งโมดูล
+                    id: Number(item.id),
                     asset_code: item.asset_code,
                     name: item.name,
                     type: item.type,
@@ -196,11 +201,13 @@ export default function BorrowRequestPage() {
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-                    {/* ================= ฝั่งซ้าย: รายการครุภัณฑ์ที่ว่าง ================= */}
-                    <div className="lg:col-span-2 space-y-4">
+                    {/* ================= ฝั่งซ้าย: โซนตารางข้อมูลครุภัณฑ์ ================= */}
+                    <div className="lg:col-span-2 space-y-6">
+                        
+                        {/* 🟢 ตารางที่ 1: อุปกรณ์ที่พร้อมให้ยืม */}
                         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
                             <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-                                📦 อุปกรณ์ที่พร้อมให้ยืม ({assets.length} รายการ)
+                                🟢 อุปกรณ์ที่พร้อมให้ยืม ({availableAssets.length} รายการ)
                             </h2>
 
                             {/* ช่องค้นหา */}
@@ -214,10 +221,10 @@ export default function BorrowRequestPage() {
                                 />
                             </div>
 
-                            {/* ตารางข้อมูล */}
+                            {/* ตารางข้อมูลที่พร้อมยืม */}
                             {loading ? (
                                 <div className="text-center py-8 text-slate-400">กำลังโหลดรายการครุภัณฑ์...</div>
-                            ) : filteredAssets.length === 0 ? (
+                            ) : availableAssets.length === 0 ? (
                                 <div className="text-center py-8 text-slate-500">❌ ไม่พบข้อมูลครุภัณฑ์ที่พร้อมยืม</div>
                             ) : (
                                 <div className="overflow-x-auto">
@@ -232,7 +239,7 @@ export default function BorrowRequestPage() {
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-slate-800/60">
-                                            {filteredAssets.map((asset) => {
+                                            {availableAssets.map((asset) => {
                                                 const assetType = asset.type || "Other";
                                                 const typeIcon = ASSET_TYPES[assetType] || "🛠️";
 
@@ -270,9 +277,73 @@ export default function BorrowRequestPage() {
                                 </div>
                             )}
                         </div>
+
+                        {/* 🔒 ตารางที่ 2: ครุภัณฑ์ที่อยู่ระหว่างการยืมหรือชำรุด (เพิ่มใหม่ด้านล่าง) */}
+                        {!loading && (
+                            <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-6 shadow-inner">
+                                <h2 className="text-sm font-bold text-slate-400 mb-2 flex items-center gap-2">
+                                    🔒 ครุภัณฑ์ที่ไม่ว่างชั่วคราว ({borrowedAssets.length} รายการ)
+                                </h2>
+                                <p className="text-xs text-slate-600 mb-4">ครุภัณฑ์กลุ่มนี้อยู่ระหว่างการใช้งานหรือชำรุด จะเปิดให้ยืมเมื่อได้รับการส่งคืนและปรับสถานะ</p>
+
+                                {borrowedAssets.length === 0 ? (
+                                    <div className="text-center py-6 text-slate-600 text-xs">✨ ไม่มีครุภัณฑ์ถูกยืมอยู่ ทุกชิ้นพร้อมใช้งานทั้งหมด</div>
+                                ) : (
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-left text-xs sm:text-sm">
+                                            <thead>
+                                                <tr className="border-b border-slate-800/60 text-slate-500 font-medium">
+                                                    <th className="p-3">ชื่อครุภัณฑ์</th>
+                                                    <th className="p-3">ประเภท</th>
+                                                    <th className="p-3">รหัส/Serial</th>
+                                                    <th className="p-3">เลขที่สัญญา</th>
+                                                    <th className="p-3 text-center">สถานะ</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-800/30 text-slate-400">
+                                                {borrowedAssets.map((asset) => {
+                                                    const assetType = asset.type || "Other";
+                                                    const typeIcon = ASSET_TYPES[assetType] || "🛠️";
+                                                    const isBroken = asset.status === "ชำรุด";
+
+                                                    return (
+                                                        <tr key={asset.id} className="hover:bg-slate-800/10 transition-colors opacity-70">
+                                                            <td className="p-3">
+                                                                <div className="text-slate-400 font-medium">{asset.name || "-"}</div>
+                                                                <div className="text-slate-600 font-mono text-[11px] mt-0.5">{asset.asset_code}</div>
+                                                            </td>
+                                                            <td className="p-3">
+                                                                <span className="px-2 py-0.5 bg-slate-950/50 text-slate-500 border border-slate-900 rounded text-xs inline-flex items-center gap-1">
+                                                                    {typeIcon} {assetType}
+                                                                </span>
+                                                            </td>
+                                                            <td className="p-3 text-slate-500 font-mono text-xs">
+                                                                {asset.serial_number || "-"}
+                                                            </td>
+                                                            <td className="p-3 text-xs font-mono text-slate-600">
+                                                                {asset.contract_number || "-"}
+                                                            </td>
+                                                            <td className="p-3 text-center">
+                                                                <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold border ${
+                                                                    isBroken 
+                                                                        ? "bg-red-950/40 text-red-400 border-red-900/40" 
+                                                                        : "bg-amber-950/40 text-amber-400 border-amber-900/40"
+                                                                }`}>
+                                                                    ● {asset.status || "ถูกยืมอยู่"}
+                                                                </span>
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
 
-                    {/* ================= ฝั่งขวา: ตะกร้าและฟอร์มส่งข้อมูล ================= */}
+                    {/* ================= ฝั่งขวา: ตะกร้าและฟอร์มส่งข้อมูล (คงเดิม) ================= */}
                     <div className="space-y-6">
                         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl sticky top-6">
                             <h2 className="text-xl font-bold text-white mb-4 flex items-center justify-between">
@@ -346,24 +417,22 @@ export default function BorrowRequestPage() {
                                 </div>
 
                                 <div>
+                                    <label className="block text-xs font-semibold text-slate-400 mb-1.5">กำหนดส่งคืนครุภัณฑ์</label>
                                     <input
-    type="date"
-    required
-    // 1. นำ color-scheme-dark ออกจาก className
-    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-slate-100 text-sm focus:outline-none focus:border-blue-500 cursor-pointer"
-    // 2. ใช้ style อินไลน์เพื่อบังคับปฏิทินเป็นธีมมืดและดึงไอคอนให้เด่นขึ้น
-    style={{ colorScheme: "dark" }}
-    value={returnDate}
-    onChange={(e) => setReturnDate(e.target.value)}
-    // 3. ⚡ ไม้ตาย: จิ้มตรงไหนในกล่องก็เด้ง ไม่ต้องเล็งไอคอนเล็กๆ
-    onClick={(e) => {
-        try {
-            (e.target as any).showPicker();
-        } catch (err) {
-            console.log("Browser doesn't support showPicker");
-        }
-    }}
-/>
+                                        type="date"
+                                        required
+                                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-slate-100 text-sm focus:outline-none focus:border-blue-500 cursor-pointer"
+                                        style={{ colorScheme: "dark" }}
+                                        value={returnDate}
+                                        onChange={(e) => setReturnDate(e.target.value)}
+                                        onClick={(e) => {
+                                            try {
+                                                (e.target as any).showPicker();
+                                            } catch (err) {
+                                                console.log("Browser doesn't support showPicker");
+                                            }
+                                        }}
+                                    />
                                 </div>
 
                                 {isMounted && (
