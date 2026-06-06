@@ -346,14 +346,24 @@ export default function BorrowRequestPage() {
                                 </div>
 
                                 <div>
-                                    <label className="block text-xs font-semibold text-slate-400 mb-1.5">กำหนดส่งคืนอุปกรณ์</label>
                                     <input
-                                        type="date"
-                                        required
-                                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-slate-100 text-sm focus:outline-none focus:border-blue-500 color-scheme-dark"
-                                        value={returnDate}
-                                        onChange={(e) => setReturnDate(e.target.value)}
-                                    />
+    type="date"
+    required
+    // 1. นำ color-scheme-dark ออกจาก className
+    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-slate-100 text-sm focus:outline-none focus:border-blue-500 cursor-pointer"
+    // 2. ใช้ style อินไลน์เพื่อบังคับปฏิทินเป็นธีมมืดและดึงไอคอนให้เด่นขึ้น
+    style={{ colorScheme: "dark" }}
+    value={returnDate}
+    onChange={(e) => setReturnDate(e.target.value)}
+    // 3. ⚡ ไม้ตาย: จิ้มตรงไหนในกล่องก็เด้ง ไม่ต้องเล็งไอคอนเล็กๆ
+    onClick={(e) => {
+        try {
+            (e.target as any).showPicker();
+        } catch (err) {
+            console.log("Browser doesn't support showPicker");
+        }
+    }}
+/>
                                 </div>
 
                                 {isMounted && (
