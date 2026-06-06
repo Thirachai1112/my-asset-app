@@ -32,7 +32,7 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json()
-    const { name, brand, serial_number, contract_number, status } = body
+    const { name, brand, serial_number, contract_number, status, type } = body
 
     if (!name) {
       return NextResponse.json({ error: 'กรุณาระบุชื่อสินทรัพย์ (name)' }, { status: 400 })
@@ -46,7 +46,8 @@ export async function POST(request: Request) {
           brand: brand || null, 
           serial_number: serial_number || null,
           contract_number: contract_number || null,
-          status: status || 'Available'
+          status: status || 'Available',
+          type: type || null
         }
       ])
       .select()

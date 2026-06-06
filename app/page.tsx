@@ -10,37 +10,47 @@ export default function PortalPage() {
           Asset Management Portal
         </h1>
         <p className="text-slate-400 mt-3 text-base md:text-lg">
-          ระบบบริหารจัดการครุภัณฑ์ภายในองค์กร กรุณาเลือกโมดูลระบบที่ต้องการใช้งาน
+          ระบบบริหารจัดการการซ่อมและยืม-คืนอุปกรณ์ กรุณาเลือกรายการที่ต้องการใช้งาน
         </p>
       </div>
 
       {/* บล็อกตัวเลือกทางเข้า (Selection Cards) */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl w-full">
-        
+
         {/* การ์ดระบบยืม-คืน */}
-        <Link href="/borrows" className="group bg-slate-800 hover:bg-slate-750 border border-slate-700/50 hover:border-blue-500/50 rounded-2xl p-8 transition-all duration-300 shadow-xl hover:shadow-blue-950/20 flex flex-col justify-between text-left">
+        <Link
+          href="/borrows/"
+          className="group bg-slate-800 hover:bg-slate-750 border border-slate-700/50 hover:border-blue-500/50 rounded-2xl p-8 transition-all duration-300 shadow-xl hover:shadow-blue-950/20 flex flex-col justify-between text-left"
+        >
           <div>
-            <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center text-2xl mb-6 border border-blue-500/20 group-hover:bg-blue-500 group-hover:text-white transition-colors duration-300">
+            <div className="w-12 h-12 rounded-xl bg-amber-500/10 flex items-center justify-center text-2xl mb-6 border border-amber-500/20 group-hover:bg-amber-500 group-hover:text-white transition-colors duration-300">
               🤝
             </div>
-            <h2 className="text-2xl font-bold text-white group-hover:text-blue-400 transition-colors">
-              ระบบยืม-คืนครุภัณฑ์
+            <h2 className="text-2xl font-bold text-white group-hover:text-amber-400 transition-colors">
+              จัดการรายการอุปกรณ์ที่ยืม-คืน
             </h2>
             <p className="text-slate-400 text-sm mt-2 leading-relaxed">
-              จัดการรายการครุภัณฑ์ทั้งหมด บันทึกประวัติการยืม-การส่งคืนอุปกรณ์ ติดตามสถานะของสินทรัพย์แบบสอดคล้องกันแบบเรียลไทม์
+              จัดการรายการอุปกรณ์ที่ยืม-คืนทั้งหมด บันทึกประวัติการยืม-การส่งคืนอุปกรณ์ ติดตามสถานะทรัพย์สินที่ถูกยืม และตรวจสอบประวัติการใช้งานของอุปกรณ์แต่ละชิ้นได้อย่างง่ายดาย
             </p>
-          </div>
-          <div className="mt-8 flex items-center text-sm font-semibold text-blue-400 group-hover:text-blue-300">
-            เข้าสู่ระบบยืม-คืน <span className="ml-2 transform group-hover:translate-x-1 transition-transform">→</span>
           </div>
         </Link>
 
-<Link 
-      href="/borrows/request" 
-      className="w-full bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold py-3 px-4 rounded-xl transition-all shadow-md shadow-blue-900/30 flex items-center justify-center gap-2 active:scale-[0.98]"
-    >
-      <span>🛒</span> ส่งคำขอยืมครุภัณฑ์
-    </Link>
+        <Link
+          href="/borrows/request"
+          className="group bg-slate-800 hover:bg-slate-750 border border-slate-700/50 hover:border-blue-500/50 rounded-2xl p-8 transition-all duration-300 shadow-xl hover:shadow-blue-950/20 flex flex-col justify-between text-left"
+        >
+          <div>
+            <div className="w-12 h-12 rounded-xl bg-amber-500/10 flex items-center justify-center text-2xl mb-6 border border-amber-500/20 group-hover:bg-amber-500 group-hover:text-white transition-colors duration-300">
+              🛒
+            </div>
+            <h2 className="text-2xl font-bold text-white group-hover:text-amber-400 transition-colors">
+              ส่งคำขอยืมอุปกรณ์
+            </h2>
+            <p className="text-slate-400 text-sm mt-2 leading-relaxed">
+              บันทึกการส่งซ่อม ติดตามขั้นตอนของช่างซ่อม เบิกจ่ายอะไหล่จากคลัง และสรุปยอดค่าใช้จ่ายในงานซ่อมบำรุง
+            </p>
+          </div>
+        </Link>
 
         {/* การ์ดระบบจัดการการซ่อม */}
         <Link href="/repairs" className="group bg-slate-800 hover:bg-slate-750 border border-slate-700/50 hover:border-amber-500/50 rounded-2xl p-8 transition-all duration-300 shadow-xl hover:shadow-amber-950/20 flex flex-col justify-between text-left">
@@ -49,15 +59,32 @@ export default function PortalPage() {
               🛠️
             </div>
             <h2 className="text-2xl font-bold text-white group-hover:text-amber-400 transition-colors">
-              ระบบแจ้งซ่อม & อะไหล่
+              การซ่อม / อะไหล่
             </h2>
             <p className="text-slate-400 text-sm mt-2 leading-relaxed">
-              บันทึกการส่งซ่อมครุภัณฑ์ที่ชำรุด ติดตามขั้นตอนของช่างซ่อม เบิกจ่ายอะไหล่จากคลัง และสรุปยอดค่าใช้จ่ายในงานซ่อมบำรุง
+              บันทึกการส่งซ่อม ติดตามขั้นตอนของช่างซ่อม เบิกจ่ายอะไหล่จากคลัง และสรุปยอดค่าใช้จ่ายในงานซ่อมบำรุง
             </p>
           </div>
-          <div className="mt-8 flex items-center text-sm font-semibold text-amber-400 group-hover:text-amber-300">
+          {/* <div className="mt-8 flex items-center text-sm font-semibold text-amber-400 group-hover:text-amber-300">
             เข้าสู่ระบบงานซ่อม <span className="ml-2 transform group-hover:translate-x-1 transition-transform">→</span>
+          </div> */}
+        </Link>
+
+        <Link href="/" className="group bg-slate-800 hover:bg-slate-750 border border-slate-700/50 hover:border-amber-500/50 rounded-2xl p-8 transition-all duration-300 shadow-xl hover:shadow-amber-950/20 flex flex-col justify-between text-left">
+          <div>
+            <div className="w-12 h-12 rounded-xl bg-amber-500/10 flex items-center justify-center text-2xl mb-6 border border-amber-500/20 group-hover:bg-amber-500 group-hover:text-white transition-colors duration-300">
+              🛠️
+            </div>
+            <h2 className="text-2xl font-bold text-white group-hover:text-amber-400 transition-colors">
+              ส่งซ่อม
+            </h2>
+            <p className="text-slate-400 text-sm mt-2 leading-relaxed">
+              ถ้าต้องการส่งซ่อมอุปกรณ์ที่มีปัญหา สามารถบันทึกข้อมูลการส่งซ่อม ได้ที่นี่
+            </p>
           </div>
+          {/* <div className="mt-8 flex items-center text-sm font-semibold text-amber-400 group-hover:text-amber-300">
+            เข้าสู่ระบบงานซ่อม <span className="ml-2 transform group-hover:translate-x-1 transition-transform">→</span>
+          </div> */}
         </Link>
 
       </div>

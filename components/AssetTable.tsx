@@ -2,6 +2,21 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Swal from 'sweetalert2'
+
+// 📦 1. รวบรวมประเภทอุปกรณ์ทั้งหมดไว้ตรงนี้ ถ้าช่างอยากเพิ่มประเภทใหม่ในอนาคต มาพิมพ์ต่อตรงนี้ได้เลยครับ!
+const ASSET_TYPES = [
+  { value: 'Notebook', label: '💻 โน้ตบุ๊ก (Notebook)' },
+  { value: 'Tablet', label: '📱 แท็บเล็ต (Tablet/iPad)' },
+  { value: 'Desktop', label: '🖥️ คอมพิวเตอร์ตั้งโต๊ะ (PC)' },
+  { value: 'Monitor', label: '📺 จอมอนิเตอร์ (Monitor)' },
+  { value: 'Projector', label: '📹 โปรเจกเตอร์ (Projector)' },
+  { value: 'Printer', label: '🖨️ เครื่องพิมพ์ (Printer)' },
+  { value: 'UPS', label: '🔋 เครื่องสำรองไฟ (UPS)' },
+  { value: 'Router', label: '🌐 อุปกรณ์เน็ตเวิร์ก (Router/Switch)' },
+  { value: 'Wiring set', label: '🔌 ชุดสายไฟ (Wiring set)' },
+  { value: 'Hand tools', label: ' 🛠️ เครื่องมือช่าง (Hand tools)' }
+]
 
 export default function AssetTable() {
   const [assets, setAssets] = useState<any[]>([])
@@ -20,6 +35,7 @@ export default function AssetTable() {
   const [serialNumber, setSerialNumber] = useState('')
   const [contractNumber, setContractNumber] = useState('')
   const [status, setStatus] = useState('Available')
+  const [type, setType] = useState('Notebook') // 👈 ใช้เก็บประเภทอุปกรณ์ที่ถูกเลือก
 
   const fetchAssets = async () => {
     setLoading(true)
@@ -38,22 +54,63 @@ export default function AssetTable() {
     fetchAssets()
   }, [])
 
-  // ➕ ลอจิกการกรองข้อมูลในตารางแบบสอดคล้องเรียลไทม์ (Client-side Filtering)
+  // 🔴 ฟังก์ชันลบครุภัณฑ์
+  const handleDelete = async (assetId: number, assetName: string, currentStatus: string) => {
+    if (currentStatus === 'Borrowed' || currentStatus === 'borrowed') {
+      Swal.fire({
+        icon: 'error',
+        title: 'ไม่สามารถลบได้!',
+        text: `ครุภัณฑ์ "${assetName}" กำลังถูกยืมอยู่ โปรดรับคืนอุปกรณ์ก่อนทำการลบ`,
+        confirmButtonColor: '#ef4444'
+      })
+      return
+    }
+
+    const result = await Swal.fire({
+      title: 'ยืนยันการลบครุภัณฑ์?',
+      text: `คุณกำลังจะลบ "${assetName}" ออกจากระบบอย่างถาวร ยืนยันหรือไม่?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'ใช่, ลบเลย',
+      cancelButtonText: 'ยกเลิก'
+    })
+
+    if (!result.isConfirmed) return
+
+    try {
+      const res = await fetch(`/api/assets/${assetId}`, {
+        method: 'DELETE'
+      })
+      const json = await res.json()
+
+      if (res.ok && json.success) {
+        Swal.fire({ icon: 'success', title: 'ลบข้อมูลสำเร็จ', timer: 1500, showConfirmButton: false })
+        fetchAssets()
+      } else {
+        throw new Error(json.error || 'เกิดข้อผิดพลาดในการลบ')
+      }
+    } catch (err: any) {
+      Swal.fire({ icon: 'error', title: 'ล้มเหลว', text: err.message })
+    }
+  }
+
+  // ➕ ลอจิกการกรองข้อมูลในตาราง (เพิ่มให้ค้นหาด้วยประเภทได้ด้วยครับช่าง)
   const filteredAssets = assets.filter((asset) => {
     const searchLower = searchTerm.toLowerCase().trim()
-    
-    // ถ้าไม่ได้พิมพ์อะไรเลย ให้ปล่อยผ่านทั้งหมด
     if (!searchLower) return true
 
-    // ตรวจสอบว่าคำค้นหาตรงกับฟิลด์ไหนบ้าง (รวมคำค้นหาของ Contract Number ด้วย)
     return (
       asset.name?.toLowerCase().includes(searchLower) ||
       asset.brand?.toLowerCase().includes(searchLower) ||
+      asset.type?.toLowerCase().includes(searchLower) || // 👈 ค้นหาจากประเภทได้ด้วย
       asset.serial_number?.toLowerCase().includes(searchLower) ||
-      asset.contract_number?.toLowerCase().includes(searchLower)
+      asset.contract_number?.toLowerCase().includes(searchLower) 
     )
   })
 
+  // ✏️ เปิด Modal (แก้บัก se พิมพ์ตกของเดิมให้แล้วครับช่าง)
   const openModal = (asset: any | null = null) => {
     if (asset) {
       setEditingAsset(asset)
@@ -61,6 +118,7 @@ export default function AssetTable() {
       setBrand(asset.brand || '')
       setSerialNumber(asset.serial_number || '')
       setContractNumber(asset.contract_number || '')
+      setType(asset.type || 'Notebook') // 👈 ดึงค่าประเภทเดิมจากฐานข้อมูลมาโชว์ในฟอร์ม
       setStatus(asset.status || 'Available')
     } else {
       setEditingAsset(null)
@@ -68,6 +126,7 @@ export default function AssetTable() {
       setBrand('')
       setSerialNumber('')
       setContractNumber('')
+      setType('Notebook') // 👈 ค่าเริ่มต้นเมื่อกดเพิ่มเครื่องใหม่
       setStatus('Available')
     }
     setIsModalOpen(true)
@@ -77,13 +136,10 @@ export default function AssetTable() {
     e.preventDefault()
     if (!name.trim()) return alert('กรุณากรอกชื่อครุภัณฑ์')
 
-    const bodyData = {
-      name,
-      brand,
-      serial_number: serialNumber,
-      contract_number: contractNumber,
-      status
-    }
+    // 📝 ส่งฟิลด์ type ไปบันทึกในตารางฐานข้อมูล assets ด้วย
+    const bodyData = editingAsset 
+      ? { name, brand, type, serial_number: serialNumber, contract_number: contractNumber } 
+      : { name, brand, type, serial_number: serialNumber, contract_number: contractNumber, status }
 
     try {
       let res
@@ -121,18 +177,18 @@ export default function AssetTable() {
       {/* แถบหัวข้อ + ปุ่มเพิ่มอุปกรณ์ */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
         <div>
-          <h3 className="text-lg font-bold text-slate-900">ทะเบียนคลังครุภัณฑ์</h3>
-          <p className="text-xs text-slate-400">พบครุภัณฑ์ทั้งหมด {filteredAssets.length} รายการ</p>
+          <h3 className="text-lg font-bold text-slate-900">ทะเบียนอุปกรณ์</h3>
+          <p className="text-xs text-slate-400">พบอุปกรณ์ทั้งหมด {filteredAssets.length} รายการ</p>
         </div>
         <button
           onClick={() => openModal(null)}
           className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm font-semibold shadow-sm transition-colors flex items-center justify-center gap-1"
         >
-          ➕ เพิ่มครุภัณฑ์ใหม่
+          ➕ เพิ่มอุปกรณ์ใหม่
         </button>
       </div>
 
-      {/* ➕ ส่วนกล่องค้นหา (Search Bar Components) */}
+      {/* ส่วนกล่องค้นหา */}
       <div className="mb-6">
         <div className="relative max-w-md w-full">
           <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
@@ -142,7 +198,7 @@ export default function AssetTable() {
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="ค้นหาด้วย ชื่อ, แบรนด์, S/N หรือเลขสัญญา..."
+            placeholder="ค้นหาด้วย ชื่อ, แบรนด์, ประเภท, S/N..."
             className="w-full bg-slate-50 border border-slate-200 hover:border-slate-300 focus:border-blue-500 rounded-xl pl-9 pr-4 py-2 text-sm focus:outline-none transition-colors text-slate-800"
           />
           {searchTerm && (
@@ -156,13 +212,14 @@ export default function AssetTable() {
         </div>
       </div>
 
-      {/* ตารางแสดงข้อมูล (เปลี่ยนมาวนลูปด้วย filteredAssets แทน assets ตัวเดิม) */}
+      {/* ตารางแสดงข้อมูล */}
       <div className="overflow-x-auto border border-slate-100 rounded-xl">
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 text-xs uppercase font-bold tracking-wider">
-              <th className="p-4 w-16 text-center">ID</th>
-              <th className="p-4">ชื่อสินทรัพย์</th>
+              <th className="p-3 w-16 text-center text-slate-600 font-bold">ลำดับ</th>
+              <th className="p-4">ชื่อ / รุ่น</th>
+              <th className="p-4">ประเภท</th>
               <th className="p-4">แบรนด์</th>
               <th className="p-4">Serial Number</th>
               <th className="p-4">เลขที่สัญญา (Contract)</th>
@@ -172,10 +229,18 @@ export default function AssetTable() {
           </thead>
           <tbody className="divide-y divide-slate-100 text-sm">
             {filteredAssets.length > 0 ? (
-              filteredAssets.map((asset) => (
+              filteredAssets.map((asset, index) => (
                 <tr key={asset.id} className="hover:bg-slate-50/50 transition-colors">
-                  <td className="p-4 text-center text-slate-400 font-mono text-xs">{asset.id}</td>
+                  <td className="p-4 text-center text-slate-400 font-mono text-xs">{index + 1}</td>
                   <td className="p-4 font-semibold text-slate-900">{asset.name}</td>
+                  
+                  {/* 👈 3. ดึงประเภทของอุปกรณ์ชิ้นนั้นๆ มาแสดงผล */}
+                  <td className="p-4">
+                    <span className="px-2 py-1 bg-slate-100 text-slate-700 border border-slate-200 rounded-lg text-xs font-medium">
+                      {ASSET_TYPES.find(t => t.value === asset.type)?.label.split(' ')[0] || '💻'} {asset.type || 'Notebook'}
+                    </span>
+                  </td>
+
                   <td className="p-4 text-slate-600">{asset.brand || '-'}</td>
                   <td className="p-4 text-slate-500 font-mono text-xs">{asset.serial_number || '-'}</td>
                   <td className="p-4 text-slate-500 font-mono text-xs">{asset.contract_number || '-'}</td>
@@ -187,13 +252,26 @@ export default function AssetTable() {
                     </span>
                   </td>
                   <td className="p-4 text-center">
-                    <button onClick={() => openModal(asset)} className="text-xs text-blue-600 hover:text-blue-800 font-semibold border border-blue-200 hover:border-blue-400 px-2.5 py-1 rounded-md transition-colors">✏️ แก้ไข</button>
+                    <div className="flex items-center justify-center gap-2">
+                      <button 
+                        onClick={() => openModal(asset)} 
+                        className="text-xs text-blue-600 hover:bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-md transition-colors font-semibold flex items-center gap-1"
+                      >
+                        ✏️ แก้ไข
+                      </button>
+                      <button
+                        onClick={() => handleDelete(asset.id, asset.name, asset.status)}
+                        className="text-xs text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 px-2.5 py-1 rounded-md transition-colors font-semibold flex items-center gap-1"
+                      >
+                        🗑️ ลบ
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan={7} className="p-8 text-center text-slate-400">❌ ไม่พบข้อมูลครุภัณฑ์ที่ตรงกับเงื่อนไขการค้นหา</td>
+                <td colSpan={8} className="p-8 text-center text-slate-400">❌ ไม่พบข้อมูลครุภัณฑ์ที่ตรงกับเงื่อนไขการค้นหา</td>
               </tr>
             )}
           </tbody>
@@ -213,9 +291,26 @@ export default function AssetTable() {
 
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               <div>
-                <label className="block text-xs font-bold uppercase text-slate-500 mb-1">ชื่อสินทรัพย์ / ครุภัณฑ์ <span className="text-red-500">*</span></label>
+                <label className="block text-xs font-bold uppercase text-slate-500 mb-1">ชื่อ / รุ่น <span className="text-red-500">*</span></label>
                 <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="เช่น MacBook Pro 16" className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500 text-slate-800" required />
               </div>
+
+              {/* 👈 4. ใช้ฟังก์ชัน .map วนลูปเพื่อแสดงหมวดหมู่ประเภททั้งหมดจาก ASSET_TYPES คลีนและเพิ่มง่ายมากครับ */}
+              <div>
+                <label className="block text-xs font-bold uppercase text-slate-500 mb-1">ประเภทอุปกรณ์</label>
+                <select 
+                  value={type} 
+                  onChange={(e) => setType(e.target.value)} 
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500 text-slate-800"
+                >
+                  {ASSET_TYPES.map((item) => (
+                    <option key={item.value} value={item.value}>
+                      {item.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               <div>
                 <label className="block text-xs font-bold uppercase text-slate-500 mb-1">แบรนด์ / ยี่ห้อ</label>
                 <input type="text" value={brand} onChange={(e) => setBrand(e.target.value)} placeholder="เช่น Apple, HP" className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500 text-slate-800" />
@@ -227,13 +322,6 @@ export default function AssetTable() {
               <div>
                 <label className="block text-xs font-bold uppercase text-slate-500 mb-1">เลขที่สัญญา / ใบจัดซื้อ (Contract Number)</label>
                 <input type="text" value={contractNumber} onChange={(e) => setContractNumber(e.target.value)} placeholder="เช่น CN-2026-004" className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500 font-mono text-slate-800" />
-              </div>
-              <div>
-                <label className="block text-xs font-bold uppercase text-slate-500 mb-1">สถานะอุปกรณ์</label>
-                <select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500 text-slate-800" >
-                  <option value="Available">Available (ว่างพร้อมใช้งาน)</option>
-                  <option value="Borrowed">Borrowed (ถูกยืมไปใช้งาน)</option>
-                </select>
               </div>
 
               <div className="flex space-x-3 pt-4 border-t border-slate-100">

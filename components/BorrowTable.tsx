@@ -1,23 +1,19 @@
-// components/BorrowTable.tsx
 'use client'
 
 import { useState, useEffect } from 'react'
+import Swal from 'sweetalert2'
 
 export default function BorrowTable() {
   const [borrows, setBorrows] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  
-  // ➕ State สำหรับเก็บคำค้นหาประวัติการยืม
   const [searchTerm, setSearchTerm] = useState('')
 
   const fetchBorrows = async () => {
     setLoading(true)
     try {
-      const res = await fetch('/api/borrows')
+      const res = await fetch('/api/borrows/history')
       const json = await res.json()
-      if (json.success) setBorrows(json.data) // อ้างอิงตาม API หลังบ้านของคุณ
-      // หมายเหตุ: หากโครงสร้าง API ของคุณส่งกลับมาในชื่อ json.data ให้ใช้ setBorrows(json.data)
-      if (json.success) setBorrows(json.data)
+      if (json.success) setBorrows(json.history || json.data || [])
     } catch (err) {
       console.error('Error:', err)
     } finally {
@@ -29,25 +25,53 @@ export default function BorrowTable() {
     fetchBorrows()
   }, [])
 
-  // ➕ ลอจิกการกรองข้อมูลประวัติการยืมแบบเรียลไทม์
+  // 🟢 ฟังก์ชันส่งข้อมูลไปอัปเดตสถานะการคืนของ
+  const handleReturn = async (borrowId: number, assetId: number) => {
+    const result = await Swal.fire({
+      title: 'ยืนยันการคืนครุภัณฑ์?',
+      text: "ระบบจะบันทึกวันที่คืนและเปลี่ยนสถานะอุปกรณ์ชิ้นนี้ให้พร้อมใช้งาน",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#10b981',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'ยืนยันการคืน',
+      cancelButtonText: 'ยกเลิก'
+    })
+
+    if (!result.isConfirmed) return
+
+    try {
+      const res = await fetch('/api/borrows/history', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ borrowId, assetId })
+      })
+
+      const json = await res.json()
+
+      if (res.ok && json.success) {
+        Swal.fire({ icon: 'success', title: 'บันทึกการคืนสำเร็จ', timer: 1500, showConfirmButton: false })
+        fetchBorrows() // 🔄 โหลดข้อมูลใหม่เปลี่ยนเป็นสีเขียวทันที
+      } else {
+        throw new Error(json.error || 'เกิดข้อผิดพลาด')
+      }
+    } catch (err: any) {
+      Swal.fire({ icon: 'error', title: 'ล้มเหลว', text: err.message })
+    }
+  }
+
+  // ลอจิกการกรองข้อมูล
   const filteredBorrows = borrows.filter((borrow) => {
     const searchLower = searchTerm.toLowerCase().trim()
-    
-    // ถ้าไม่ได้พิมพ์อะไรเลย ให้โชว์ทั้งหมด
     if (!searchLower) return true
-
-    // ตรวจสอบสถานะคำค้นหาภาษาไทย "คืนแล้ว" / "กำลังยืม" เพื่อให้ค้นหาด้วยสเตตัสได้ด้วย
     const statusText = borrow.return_date ? 'คืนแล้ว' : 'กำลังยืมอยู่'
-    const assetName = borrow.assets?.name?.toLowerCase() || ''
-    const assetSn = borrow.assets?.serial_number?.toLowerCase() || ''
-
-    // ค้นหาจาก ชื่อผู้ยืม, แผนก หรือ สถานะการคืน
     return (
       borrow.borrower_name?.toLowerCase().includes(searchLower) ||
       borrow.borrower_dept?.toLowerCase().includes(searchLower) ||
-      statusText.includes(searchLower)
-        || assetName.includes(searchLower) // เพิ่มการค้นหาจากชื่อสินทรัพย์
-        || assetSn.includes(searchLower) // เพิ่มการค้นหาจากหมายเลขซีเรีย
+      (borrow.phone || '').includes(searchLower) ||
+      statusText.includes(searchLower) ||
+      (borrow.assets?.name?.toLowerCase() || '').includes(searchLower) ||
+      (borrow.assets?.serial_number?.toLowerCase() || '').includes(searchLower)
     )
   })
 
@@ -55,7 +79,7 @@ export default function BorrowTable() {
 
   return (
     <div className="p-6">
-      {/* แถบหัวข้อรายละเอียด */}
+      {/* ส่วนหัวแผงควบคุม */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
         <div>
           <h3 className="text-lg font-bold text-slate-900">บันทึกประวัติการยืม-คืนครุภัณฑ์</h3>
@@ -63,71 +87,88 @@ export default function BorrowTable() {
         </div>
       </div>
 
-      {/* ➕ กล่องค้นหาประวัติ (Search Bar) */}
+      {/* แถบค้นหา */}
       <div className="mb-6">
         <div className="relative max-w-md w-full">
-          <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
-            🔍
-          </span>
+          <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">🔍</span>
           <input
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="ค้นหาด้วย ชื่อผู้ยืม, แผนก หรือพิมพ์ 'กำลังยืม', 'คืนแล้ว'..."
-            className="w-full bg-slate-50 border border-slate-200 hover:border-slate-300 focus:border-blue-500 rounded-xl pl-9 pr-4 py-2 text-sm focus:outline-none transition-colors text-slate-800"
+            placeholder="ค้นหาด้วย ชื่อ, แผนก, เบอร์โทร หรือพิมพ์ 'กำลังยืม'..."
+            className="w-full bg-slate-50 border border-slate-200 hover:border-slate-300 focus:border-blue-500 rounded-xl pl-9 pr-4 py-2 text-sm focus:outline-none text-slate-800"
           />
-          {searchTerm && (
-            <button 
-              onClick={() => setSearchTerm('')}
-              className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600 text-xs font-bold"
-            >
-              ล้าง
-            </button>
-          )}
         </div>
       </div>
 
-      {/* โครงสร้างตารางยืม-คืนแบบปลอดภัย ไร้ช่องว่างระหว่างแท็กภายใน tr */}
-<div className="overflow-x-auto border border-slate-100 rounded-xl">
-  <table className="w-full text-left border-collapse">
-    <thead>
-      <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 text-xs uppercase font-bold tracking-wider">
-        <th className="p-4 w-16 text-center">ID</th>
-        <th className="p-4">ชื่อผู้ยืม</th>
-        <th className="p-4">แผนก</th>
-        <th className="p-4">อุปกรณ์ที่ยืม</th>
-        <th className="p-4">Serial Number</th>
-        <th className="p-4">วันที่ยืม</th>
-        <th className="p-4">กำหนดคืน</th>
-        <th className="p-4 text-center">สถานะการคืน</th>
-      </tr>
-    </thead>
-    <tbody className="divide-y divide-slate-100 text-sm">
-      {filteredBorrows.length > 0 ? (
-        filteredBorrows.map((borrow) => (
-          <tr key={borrow.id} className="hover:bg-slate-50/50 transition-colors">
-            <td className="p-4 text-center text-slate-400 font-mono text-xs">{borrow.id}</td>
-            <td className="p-4 font-semibold text-slate-900">{borrow.borrower_name}</td>
-            <td className="p-4 text-slate-600">{borrow.borrower_dept || '-'}</td>
-            <td className="p-4 font-medium text-slate-800">{borrow.assets?.name || 'ไม่พบข้อมูลอุปกรณ์'}</td>
-            <td className="p-4 text-slate-500 font-mono text-xs">{borrow.assets?.serial_number || '-'}</td>
-            <td className="p-4 text-slate-500 text-xs">{new Date(borrow.borrow_date).toLocaleDateString('th-TH')}</td>
-            <td className="p-4 text-slate-500 text-xs">{borrow.due_date ? new Date(borrow.due_date).toLocaleDateString('th-TH') : '-'}</td>
-            <td className="p-4 text-center">
-              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                borrow.return_date ? 'bg-slate-100 text-slate-600' : 'bg-red-50 text-red-700 border border-red-200'
-              }`}>{borrow.return_date ? 'คืนแล้ว' : 'กำลังยืมอยู่'}</span>
-            </td>
-          </tr>
-        ))
-      ) : (
-        <tr>
-          <td colSpan={8} className="p-8 text-center text-slate-400">❌ ไม่พบประวัติการยืมที่ตรงกับเงื่อนไข</td>
-        </tr>
-      )}
-    </tbody>
-  </table>
-</div>
+      {/* 🛠️ ครอบแท็กโครงสร้างตารางกลับคืนมาให้สมบูรณ์และล้าง Whitespace ไร้รอยต่อ */}
+      <div className="overflow-x-auto border border-slate-100 rounded-xl">
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 text-xs uppercase font-bold tracking-wider">
+              {[
+                { text: "ลำดับ", className: "p-4 w-16 text-center" },
+                { text: "ชื่อผู้ยืม", className: "p-4" },
+                { text: "แผนก", className: "p-4" },
+                { text: "อุปกรณ์ที่ยืม", className: "p-4" },
+                { text: "ประเภท", className: "p-4" },
+                { text: "Serial Number", className: "p-4" },
+                { text: "วันที่ยืม", className: "p-4" },
+                { text: "กำหนดคืน", className: "p-4" },
+                { text: "เบอร์ติดต่อ", className: "p-4 text-center" },
+                { text: "สถานะการคืน", className: "p-4 text-center" },
+                { text: "จัดการ", className: "p-4 text-center" }
+              ].map((header, i) => (
+                <th key={i} className={header.className}>
+                  {header.text}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100 text-sm">
+            {filteredBorrows.length > 0 ? (
+              filteredBorrows.map((borrow, index) => (
+                <tr key={borrow.id} className="hover:bg-slate-50/50 transition-colors">
+                  <td className="p-4 text-center text-slate-400 font-mono text-xs">{index + 1}</td>
+                  <td className="p-4 font-semibold text-slate-900">{borrow.borrower_name}</td>
+                  <td className="p-4 text-slate-600">{borrow.borrower_dept || '-'}</td>
+                  <td className="p-4 font-medium text-slate-800">{borrow.assets?.name || 'ไม่พบข้อมูลอุปกรณ์'}</td>
+                  <td className="p-4 text-slate-500 font-mono text-xs">{borrow.assets?.type || '-'}</td>
+                  <td className="p-4 text-slate-500 font-mono text-xs">{borrow.assets?.serial_number || '-'}</td>
+                  <td className="p-4 text-slate-500 text-xs">{new Date(borrow.borrow_date).toLocaleDateString('th-TH')}</td>
+                  <td className="p-4 text-slate-500 text-xs">{borrow.due_date ? new Date(borrow.due_date).toLocaleDateString('th-TH') : '-'}</td>
+                  <td className="p-4 text-center text-slate-700 font-mono text-xs font-medium">{borrow.phone || '-'}</td>
+                  <td className="p-4 text-center">
+                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${
+                      borrow.return_date ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'
+                    }`}>
+                      {borrow.return_date ? '● คืนแล้ว' : '● กำลังยืมอยู่'}
+                    </span>
+                  </td>
+                  <td className="p-4 text-center">
+                    {!borrow.return_date ? (
+                      <button
+                        onClick={() => handleReturn(borrow.id, borrow.assets?.id)}
+                        className="px-3 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 rounded-lg text-xs font-medium transition-colors"
+                      >
+                        ↩️ คืนของ
+                      </button>
+                    ) : (
+                      <span className="text-xs text-slate-400 font-mono">
+                        {new Date(borrow.return_date).toLocaleDateString('th-TH')}
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={10} className="p-8 text-center text-slate-400">❌ ไม่พบประวัติการยืมที่ตรงกับเงื่อนไข</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   )
 }
