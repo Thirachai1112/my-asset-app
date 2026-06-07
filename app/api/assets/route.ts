@@ -32,7 +32,7 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json()
-    const { assets_code, name, brand, serial_number, contract_number, status, type } = body
+    const { name, brand, serial_number, contract_number, status, type } = body
 
     if (!name) {
       return NextResponse.json({ error: 'กรุณาระบุชื่อสินทรัพย์ (name)' }, { status: 400 })
@@ -42,7 +42,6 @@ export async function POST(request: Request) {
       .from('assets')
       .insert([
         { 
-          assets_code: assets_code || null,
           name, 
           brand: brand || null, 
           serial_number: serial_number || null,
@@ -62,5 +61,3 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'รูปแบบข้อมูลไม่ถูกต้อง' }, { status: 400 })
   }
 }
-
-
