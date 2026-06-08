@@ -32,7 +32,7 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json()
-    const { name, brand, serial_number, contract_number, status, type } = body
+    const { name, brand, asset_code, serial_number, contract_number, status, type } = body
 
     if (!name) {
       return NextResponse.json({ error: 'กรุณาระบุชื่อสินทรัพย์ (name)' }, { status: 400 })
@@ -43,7 +43,8 @@ export async function POST(request: Request) {
       .insert([
         { 
           name, 
-          brand: brand || null, 
+          brand: brand || null,
+          asset_code: asset_code || null, 
           serial_number: serial_number || null,
           contract_number: contract_number || null,
           status: status || 'Available',

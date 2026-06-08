@@ -10,7 +10,9 @@ import { generateBorrowPDF } from "./generateBorrowPDF";
 interface Asset {
     id: string;
     asset_code: string;
+    borrower_purpose: string;
     name: string;
+    brand: string;
     type: string;
     serial_number: string;
     contract_number: string;
@@ -41,12 +43,13 @@ export default function BorrowRequestPage() {
     const [loading, setLoading] = useState(true);
 
     // ข้อมูลฟอร์มผู้ยืม
+    const [borrowerPurpose, setBorrowerPurpose] = useState("");
     const [borrowerName, setBorrowerName] = useState("");
     const [department, setDepartment] = useState("");
     const [phone, setPhone] = useState("");
     const [returnDate, setReturnDate] = useState("");
 
-    // 1. ดึงข้อมูลครุภัณฑ์ทั้งหมดจากหลังบ้าน (ไม่กรองทิ้งที่นี่ เพื่อเอาไปแยก 2 ตาราง)
+    // 1. ดึงข้อมูลครุภัณฑ์ทั้งหมดจากหลังบ้าน
     useEffect(() => {
         fetch("/api/assets")
             .then((res) => res.json())
@@ -54,7 +57,7 @@ export default function BorrowRequestPage() {
                 const assetsArray = Array.isArray(responseBody.data) ? responseBody.data : [];
                 setAssets(assetsArray); // ⚡ เก็บครุภัณฑ์ทั้งหมดลง State
                 setLoading(false);
-                setIsMounted(true); 
+                setIsMounted(true);
             })
             .catch((err) => {
                 console.error("Error fetching assets:", err);
@@ -83,10 +86,11 @@ export default function BorrowRequestPage() {
     // กรองรวมตาม Keyword ค้นหาก่อน
     const searchedAssets = assets.filter((asset) => {
         const name = asset?.name ? asset.name.toLowerCase() : "";
+        const brand = asset?.brand ? asset.brand.toLowerCase() : "";
         const code = asset?.asset_code ? asset.asset_code.toLowerCase() : "";
         const type = asset?.type ? asset.type.toLowerCase() : "";
         const serial = asset?.serial_number ? asset.serial_number.toLowerCase() : "";
-        return name.includes(searchLower) || code.includes(searchLower) || type.includes(searchLower) || serial.includes(searchLower);
+        return name.includes(searchLower) || code.includes(searchLower) || type.includes(searchLower) || serial.includes(searchLower) || brand.includes(searchLower);
     });
 
     // 🟢 ตารางบน: ครุภัณฑ์ที่พร้อมให้ยืม (สถานะ ว่าง หรือ Available)
@@ -120,16 +124,17 @@ export default function BorrowRequestPage() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     borrower_name: borrowerName,
+                    borrower_purpose: borrowerPurpose,
                     department: department,
                     phone: phone,
                     return_date: returnDate,
-                    items: cart.map((item) => ({ 
-                        asset_id: item.id, 
-                        asset_code: item.asset_code, 
+                    items: cart.map((item) => ({
+                        asset_id: item.id,
                         asset_name: item.name,
-                        asset_type: item.type, 
-                        serial_number: item.serial_number, 
-                        contract_number: item.contract_number 
+                        asset_brand: item.brand, // 🟢 เพิ่มข้อมูลแบรนด์ไปด้วยสำหรับใช้ใน PDF
+                        asset_type: item.type,
+                        serial_number: item.serial_number,
+                        contract_number: item.contract_number
                     }))
                 })
             });
@@ -143,6 +148,7 @@ export default function BorrowRequestPage() {
             await generateBorrowPDF(
                 {
                     borrower_name: borrowerName,
+                    borrower_purpose: borrowerPurpose,
                     department: department,
                     phone: phone,
                     return_date: returnDate
@@ -151,6 +157,7 @@ export default function BorrowRequestPage() {
                     id: Number(item.id),
                     asset_code: item.asset_code,
                     name: item.name,
+                    brand: item.brand, 
                     type: item.type,
                     serial_number: item.serial_number,
                     contract_number: item.contract_number
@@ -190,7 +197,7 @@ export default function BorrowRequestPage() {
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 pb-4 border-b border-slate-800">
                     <div>
                         <h1 className="text-3xl font-extrabold text-white flex items-center gap-3">
-                            🛒 ระบบส่งคำขอยืมครุภัณฑ์
+                            🛒 ระบบส่งคำขอยืมอุปกรณ์
                         </h1>
                         <p className="text-slate-400 text-sm mt-1">เลือกอุปกรณ์ที่ต้องการใส่ตะกร้า จากนั้นกรอกข้อมูลยืมด้านขวาได้เลย</p>
                     </div>
@@ -203,7 +210,7 @@ export default function BorrowRequestPage() {
 
                     {/* ================= ฝั่งซ้าย: โซนตารางข้อมูลครุภัณฑ์ ================= */}
                     <div className="lg:col-span-2 space-y-6">
-                        
+
                         {/* 🟢 ตารางที่ 1: อุปกรณ์ที่พร้อมให้ยืม */}
                         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
                             <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
@@ -214,7 +221,7 @@ export default function BorrowRequestPage() {
                             <div className="mb-4">
                                 <input
                                     type="text"
-                                    placeholder="🔍 ค้นหาด้วย ชื่อครุภัณฑ์, แบรนด์, ประเภท, รหัส หรือ Serial Number..."
+                                    placeholder="🔍 ค้นหาด้วย ชื่ออุปกรณ์, แบรนด์, ประเภท, รหัส หรือ Serial Number..."
                                     className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 text-sm transition-colors"
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
@@ -223,17 +230,19 @@ export default function BorrowRequestPage() {
 
                             {/* ตารางข้อมูลที่พร้อมยืม */}
                             {loading ? (
-                                <div className="text-center py-8 text-slate-400">กำลังโหลดรายการครุภัณฑ์...</div>
+                                <div className="text-center py-8 text-slate-400">กำลังโหลดรายการอุปกรณ์...</div>
                             ) : availableAssets.length === 0 ? (
-                                <div className="text-center py-8 text-slate-500">❌ ไม่พบข้อมูลครุภัณฑ์ที่พร้อมยืม</div>
+                                <div className="text-center py-8 text-slate-500">❌ ไม่พบข้อมูลอุปกรณ์ที่พร้อมยืม</div>
                             ) : (
                                 <div className="overflow-x-auto">
                                     <table className="w-full text-left text-sm">
                                         <thead>
                                             <tr className="border-b border-slate-800 text-slate-400 font-semibold bg-slate-950/40">
-                                                <th className="p-3">ชื่อครุภัณฑ์</th>
+                                                <th className="p-3">ชื่ออุปกรณ์</th>
+                                                <th className="p-3">แบรนด์</th>
                                                 <th className="p-3">ประเภท</th>
                                                 <th className="p-3">รหัส/Serial</th>
+                                                <th className="p-3">รหัสทรัพย์สิน</th>
                                                 <th className="p-3">เลขที่สัญญา</th>
                                                 <th className="p-3 text-center">การกระทำ</th>
                                             </tr>
@@ -247,7 +256,10 @@ export default function BorrowRequestPage() {
                                                     <tr key={asset.id} className="hover:bg-slate-800/30 transition-colors">
                                                         <td className="p-3">
                                                             <div className="text-white font-semibold">{asset.name || "-"}</div>
-                                                            <div className="text-slate-500 font-mono text-xs mt-0.5">{asset.asset_code}</div>
+                                                        </td>
+                                                        {/* เปลี่ยน th เป็น td และเรียงค่าตามลำดับหัวตารางด้านบนให้เป๊ะ */}
+                                                        <td className="p-3 text-slate-300 font-mono text-xs">
+                                                            {asset.brand || "-"}
                                                         </td>
                                                         <td className="p-3">
                                                             <span className="px-2.5 py-1 bg-slate-950 text-slate-300 border border-slate-800 rounded-lg text-xs font-medium inline-flex items-center gap-1.5">
@@ -256,6 +268,9 @@ export default function BorrowRequestPage() {
                                                         </td>
                                                         <td className="p-3 text-slate-300 font-mono text-xs">
                                                             {asset.serial_number || "-"}
+                                                        </td>
+                                                        <td className="p-3 text-slate-300 font-mono text-xs">
+                                                            {asset.asset_code || "-"}
                                                         </td>
                                                         <td className="p-3 text-xs font-mono text-slate-400">
                                                             {asset.contract_number || "-"}
@@ -278,24 +293,26 @@ export default function BorrowRequestPage() {
                             )}
                         </div>
 
-                        {/* 🔒 ตารางที่ 2: ครุภัณฑ์ที่อยู่ระหว่างการยืมหรือชำรุด (เพิ่มใหม่ด้านล่าง) */}
+                        {/* 🔒 ตารางที่ 2: ครุภัณฑ์ที่อยู่ระหว่างการยืมหรือชำรุด */}
                         {!loading && (
                             <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-6 shadow-inner">
                                 <h2 className="text-sm font-bold text-slate-400 mb-2 flex items-center gap-2">
-                                    🔒 ครุภัณฑ์ที่ไม่ว่างชั่วคราว ({borrowedAssets.length} รายการ)
+                                    🔒 อุปกรณ์ที่ไม่ว่างชั่วคราว ({borrowedAssets.length} รายการ)
                                 </h2>
-                                <p className="text-xs text-slate-600 mb-4">ครุภัณฑ์กลุ่มนี้อยู่ระหว่างการใช้งานหรือชำรุด จะเปิดให้ยืมเมื่อได้รับการส่งคืนและปรับสถานะ</p>
+                                <p className="text-xs text-slate-600 mb-4">อุปกรณ์กลุ่มนี้อยู่ระหว่างการใช้งานหรือชำรุด จะเปิดให้ยืมเมื่อได้รับการส่งคืนและปรับสถานะ</p>
 
                                 {borrowedAssets.length === 0 ? (
-                                    <div className="text-center py-6 text-slate-600 text-xs">✨ ไม่มีครุภัณฑ์ถูกยืมอยู่ ทุกชิ้นพร้อมใช้งานทั้งหมด</div>
+                                    <div className="text-center py-6 text-slate-600 text-xs">✨ ไม่มีอุปกรณ์ถูกยืมอยู่ ทุกชิ้นพร้อมใช้งานทั้งหมด</div>
                                 ) : (
                                     <div className="overflow-x-auto">
                                         <table className="w-full text-left text-xs sm:text-sm">
                                             <thead>
                                                 <tr className="border-b border-slate-800/60 text-slate-500 font-medium">
-                                                    <th className="p-3">ชื่อครุภัณฑ์</th>
+                                                    <th className="p-3">ชื่ออุปกรณ์</th>
+                                                    <th className="p-3">แบรนด์</th>
                                                     <th className="p-3">ประเภท</th>
                                                     <th className="p-3">รหัส/Serial</th>
+                                                    <th className="p-3">รหัสทรัพย์สิน</th>
                                                     <th className="p-3">เลขที่สัญญา</th>
                                                     <th className="p-3 text-center">สถานะ</th>
                                                 </tr>
@@ -310,7 +327,10 @@ export default function BorrowRequestPage() {
                                                         <tr key={asset.id} className="hover:bg-slate-800/10 transition-colors opacity-70">
                                                             <td className="p-3">
                                                                 <div className="text-slate-400 font-medium">{asset.name || "-"}</div>
-                                                                <div className="text-slate-600 font-mono text-[11px] mt-0.5">{asset.asset_code}</div>
+                                                            </td>
+                                                            {/* แก้ไขตรงโครงสร้างนี้ให้ตรงกับหัวข้อข้างบนเช่นกัน */}
+                                                            <td className="p-3 text-slate-500 font-mono text-xs">
+                                                                {asset.brand || "-"}
                                                             </td>
                                                             <td className="p-3">
                                                                 <span className="px-2 py-0.5 bg-slate-950/50 text-slate-500 border border-slate-900 rounded text-xs inline-flex items-center gap-1">
@@ -320,15 +340,17 @@ export default function BorrowRequestPage() {
                                                             <td className="p-3 text-slate-500 font-mono text-xs">
                                                                 {asset.serial_number || "-"}
                                                             </td>
+                                                            <td className="p-3 text-slate-500 font-mono text-xs">
+                                                                {asset.asset_code || "-"}
+                                                            </td>
                                                             <td className="p-3 text-xs font-mono text-slate-600">
                                                                 {asset.contract_number || "-"}
                                                             </td>
                                                             <td className="p-3 text-center">
-                                                                <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold border ${
-                                                                    isBroken 
-                                                                        ? "bg-red-950/40 text-red-400 border-red-900/40" 
+                                                                <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold border ${isBroken
+                                                                        ? "bg-red-950/40 text-red-400 border-red-900/40"
                                                                         : "bg-amber-950/40 text-amber-400 border-amber-900/40"
-                                                                }`}>
+                                                                    }`}>
                                                                     ● {asset.status || "ถูกยืมอยู่"}
                                                                 </span>
                                                             </td>
@@ -351,7 +373,7 @@ export default function BorrowRequestPage() {
                                 <span className="text-xs bg-blue-500/10 text-blue-400 px-2.5 py-1 rounded-full border border-blue-500/20">
                                     {cart.length} ชิ้น
                                 </span>
-                            </h2> 
+                            </h2>
 
                             {/* รายการของในตะกร้า */}
                             <div className="mb-6 space-y-2 max-h-48 overflow-y-auto pr-1">
@@ -380,6 +402,18 @@ export default function BorrowRequestPage() {
 
                             {/* ฟอร์มกรอกข้อมูลผู้ยืม */}
                             <form onSubmit={handleSubmitBorrow} className="space-y-4 border-t border-slate-800 pt-4">
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-400 mb-1.5">วัตถุประสงค์การใช้งาน</label>
+                                    <input
+                                        type="text"
+                                        required
+                                        placeholder="ระบุวัตถุประสงค์การใช้งาน"
+                                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-slate-100 text-sm focus:outline-none focus:border-blue-500"
+                                        value={borrowerPurpose}
+                                        onChange={(e) => setBorrowerPurpose(e.target.value)}
+                                    />
+                                </div>
+
                                 <div>
                                     <label className="block text-xs font-semibold text-slate-400 mb-1.5">ชื่อ-นามสกุล ผู้ยืม</label>
                                     <input
@@ -417,7 +451,7 @@ export default function BorrowRequestPage() {
                                 </div>
 
                                 <div>
-                                    <label className="block text-xs font-semibold text-slate-400 mb-1.5">กำหนดส่งคืนครุภัณฑ์</label>
+                                    <label className="block text-xs font-semibold text-slate-400 mb-1.5">กำหนดส่งคืนอุปกรณ์</label>
                                     <input
                                         type="date"
                                         required
@@ -425,7 +459,7 @@ export default function BorrowRequestPage() {
                                         style={{ colorScheme: "dark" }}
                                         value={returnDate}
                                         onChange={(e) => setReturnDate(e.target.value)}
-                                        onClick={(e) => {
+                                        onFocus={(e) => {
                                             try {
                                                 (e.target as any).showPicker();
                                             } catch (err) {
@@ -441,7 +475,7 @@ export default function BorrowRequestPage() {
                                         disabled={cart.length === 0}
                                         className="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-slate-800 disabled:text-slate-500 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-blue-900/20 text-sm mt-2"
                                     >
-                                        🚀 ยืนยันคำขอยืมครุภัณฑ์
+                                        🚀 ยืนยันคำขอยืมอุปกรณ์
                                     </button>
                                 )}
                             </form>

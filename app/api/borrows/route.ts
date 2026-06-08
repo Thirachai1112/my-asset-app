@@ -38,7 +38,9 @@ export async function POST(request: Request) {
     
     // 👈 ✅ แกะค่าตามโครงสร้างที่หน้าบ้านส่งมาจริง
     const { 
+      
       borrower_name, 
+      borrower_purpose, // หน้าบ้านส่งฟิลด์นี้มา
       department, // หน้าบ้านส่งฟิลด์นี้มา
       phone,      // หน้าบ้านส่งฟิลด์นี้มา
       return_date, // หน้าบ้านส่งฟิลด์นี้มา (due_date)
@@ -51,6 +53,9 @@ export async function POST(request: Request) {
     }
     if (!borrower_name) {
       return NextResponse.json({ error: 'กรุณาระบุชื่อผู้ยืม' }, { status: 400 })
+    }
+    if (!borrower_purpose) {
+      return NextResponse.json({ error: 'กรุณาระบุวัตถุประสงค์การใช้งาน' }, { status: 400 })
     }
 
     const insertedBorrows = []
@@ -67,7 +72,7 @@ export async function POST(request: Request) {
         .single()
 
       if (assetCheck && (assetCheck.status === 'Borrowed' || assetCheck.status === 'กำลังใช้งาน')) {
-        return NextResponse.json({ error: `ครุภัณฑ์รหัส ${item.asset_code} ถูกยืมไปแล้ว ไม่สามารถยืมซ้ำได้` }, { status: 400 })
+        return NextResponse.json({ error: `อุปกรณ์ ${item.asset_code} ถูกยืมไปแล้ว ไม่สามารถยืมซ้ำได้` }, { status: 400 })
       }
 
       // ตั๋วที่ 1: บันทึกข้อมูลลงตาราง borrows ของชิ้นนั้น ๆ
@@ -81,7 +86,7 @@ export async function POST(request: Request) {
             borrower_name: borrower_name,
             borrower_dept: department || null, // จับคู่ฟิลด์หน้าบ้าน -> หลังบ้าน
             phone: phone || null,             // บันทึกเบอร์โทรศัพท์ลงฐานข้อมูล
-            purpose: null,
+            purpose: borrower_purpose || null,
             borrow_date: new Date().toISOString(),
             due_date: return_date ? new Date(return_date).toISOString() : null // ใช้กำหนดวันส่งคืนจากหน้าบ้าน
           }

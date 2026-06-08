@@ -11,13 +11,14 @@ export async function PUT(
 
   try {
     const body = await request.json()
-    const { name, brand, serial_number, contract_number, status, type } = body
+    const { name, brand, asset_code, serial_number, contract_number, status, type } = body
 
     const { data, error } = await supabase
       .from('assets')
       .update({ 
         name, 
         brand, 
+        asset_code,
         serial_number, 
         contract_number, 
         status,
