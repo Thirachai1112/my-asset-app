@@ -4,9 +4,9 @@
 import { useState, useEffect } from 'react'
 import Swal from 'sweetalert2'
 
-// 📦 1. รวบรวมประเภทอุปกรณ์ทั้งหมดไว้ตรงนี้ ถ้าช่างอยากเพิ่มประเภทใหม่ในอนาคต มาพิมพ์ต่อตรงนี้ได้เลยครับ!
+// 📦 1. รวบรวมประเภทอุปกรณ์ทั้งหมดไว้ตรงนี้
 const ASSET_TYPES = [
-  { value: 'Notebook', label: '💻 โน้ตบุ๊ก (Notebook)' },
+  { value: 'Notebook', label: '💻 (Notebook)' },
   { value: 'Tablet', label: '📱 แท็บเล็ต (Tablet/iPad)' },
   { value: 'Desktop', label: '🖥️ คอมพิวเตอร์ตั้งโต๊ะ (PC)' },
   { value: 'Monitor', label: '📺 จอมอนิเตอร์ (Monitor)' },
@@ -15,7 +15,7 @@ const ASSET_TYPES = [
   { value: 'UPS', label: '🔋 เครื่องสำรองไฟ (UPS)' },
   { value: 'Router', label: '🌐 อุปกรณ์เน็ตเวิร์ก (Router/Switch)' },
   { value: 'Wiring set', label: '🔌 ชุดสายไฟ (Wiring set)' },
-  { value: 'Hand tools', label: ' 🛠️ เครื่องมือช่าง (Hand tools)' }
+  { value: 'Hand tools', label: '🛠️ เครื่องมือช่าง (Hand tools)' }
 ]
 
 export default function AssetTable() {
@@ -32,11 +32,11 @@ export default function AssetTable() {
   // States สำหรับข้อมูลในฟอร์ม
   const [name, setName] = useState('')
   const [brand, setBrand] = useState('')
-  const [assetCode, setAssetCode] = useState('') // 🟢 แก้ไข: ประกาศ State รองรับรหัสทรัพย์สินเรียบร้อยแล้ว
+  const [assetCode, setAssetCode] = useState('') 
   const [serialNumber, setSerialNumber] = useState('')
   const [contractNumber, setContractNumber] = useState('')
   const [status, setStatus] = useState('Available')
-  const [type, setType] = useState('Notebook') // 👈 ใช้เก็บประเภทอุปกรณ์ที่ถูกเลือก
+  const [type, setType] = useState('Notebook') 
 
   const fetchAssets = async () => {
     setLoading(true)
@@ -47,7 +47,7 @@ export default function AssetTable() {
     } catch (err) {
       console.error('Error:', err)
     } finally {
-      setLoading(false)
+      loading && setLoading(false)
     }
   }
 
@@ -97,7 +97,7 @@ export default function AssetTable() {
     }
   }
 
-  // ➕ ลอจิกการกรองข้อมูลในตาราง
+  // ➕ ลоจิกการกรองข้อมูลในตาราง
   const filteredAssets = assets.filter((asset) => {
     const searchLower = searchTerm.toLowerCase().trim()
     if (!searchLower) return true
@@ -105,20 +105,20 @@ export default function AssetTable() {
     return (
       asset.name?.toLowerCase().includes(searchLower) ||
       asset.brand?.toLowerCase().includes(searchLower) ||
-      asset.asset_code?.toLowerCase().includes(searchLower) || // ค้นหาจากรหัสทรัพย์สิน
+      asset.asset_code?.toLowerCase().includes(searchLower) || 
       asset.type?.toLowerCase().includes(searchLower) ||
       asset.serial_number?.toLowerCase().includes(searchLower) ||
       asset.contract_number?.toLowerCase().includes(searchLower)
     )
   })
 
-  // ✏️ เปิด Modal และดึงค่าเก่ามาหยอดใส่ฟอร์มให้ครบถ้วน
+  // ✏️ เปิด Modal และดึงค่าเก่ามาหยอดใส่ฟอร์ม
   const openModal = (asset: any | null = null) => {
     if (asset) {
       setEditingAsset(asset)
       setName(asset.name || '')
       setBrand(asset.brand || '')
-      setAssetCode(asset.asset_code || '') // 🟢 ดึงรหัสเก่ามาแสดงในฟอร์มเมื่อกดแก้ไข
+      setAssetCode(asset.asset_code || '') 
       setSerialNumber(asset.serial_number || '')
       setContractNumber(asset.contract_number || '')
       setType(asset.type || 'Notebook')
@@ -127,7 +127,7 @@ export default function AssetTable() {
       setEditingAsset(null)
       setName('')
       setBrand('')
-      setAssetCode('') // 🟢 ล้างช่องข้อมูลให้ว่างเมื่อกดเพิ่มชิ้นใหม่
+      setAssetCode('') 
       setSerialNumber('')
       setContractNumber('')
       setType('Notebook')
@@ -140,12 +140,10 @@ export default function AssetTable() {
     e.preventDefault()
     if (!name.trim()) return alert('กรุณากรอกชื่อครุภัณฑ์')
 
-    // 🟢 ล้าง whitespace และเปลี่ยนค่าว่างให้เป็น null เพื่อป้องกันบักซีเรียล/รหัสทรัพย์สินเบิ้ลว่างบน Production
     const finalAssetCode = assetCode.trim() === "" ? null : assetCode.trim()
     const finalSerialNumber = serialNumber.trim() === "" ? null : serialNumber.trim()
     const finalContractNumber = contractNumber.trim() === "" ? null : contractNumber.trim()
 
-    // 📝 ผูกฟิลด์ asset_code เตรียมจัดส่งไปให้เซิร์ฟเวอร์ Backend API
     const bodyData = editingAsset
       ? { name, brand, type, asset_code: finalAssetCode, serial_number: finalSerialNumber, contract_number: finalContractNumber }
       : { name, brand, type, asset_code: finalAssetCode, serial_number: finalSerialNumber, contract_number: finalContractNumber, status }
@@ -221,12 +219,12 @@ export default function AssetTable() {
         </div>
       </div>
 
-      {/* ตารางแสดงข้อมูล */}
-      <div className="overflow-x-auto border border-slate-100 rounded-xl bg-white shadow-sm">
+      {/* 🧱 ตารางแสดงข้อมูลแบบคลีน (เอาเส้นตั้งออกทั้งหมดแล้ว) */}
+      <div className="overflow-x-auto border border-slate-200 rounded-xl bg-white shadow-sm">
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 text-xs uppercase font-bold tracking-wider">
-              <th className="p-3 w-16 text-center font-bold">ลำดับ</th>
+              <th className="p-4 w-16 text-center font-bold">ลำดับ</th>
               <th className="p-4">ชื่อ / รุ่น</th>
               <th className="p-4">ประเภท</th>
               <th className="p-4">แบรนด์</th>
@@ -244,14 +242,15 @@ export default function AssetTable() {
                   <td className="p-4 text-center text-slate-400 font-mono text-xs">{index + 1}</td>
                   <td className="p-4 font-semibold text-slate-900">{asset.name}</td>
 
+                  {/* 🛠️ ช่องประเภท: เอา border-r ออก และใช้ inline-flex + whitespace-nowrap ป้องกันคำเด้งตกบรรทัด */}
                   <td className="p-4">
-                    <span className="px-2 py-1 bg-slate-100 text-slate-700 border border-slate-200 rounded-lg text-xs font-medium">
-                      {ASSET_TYPES.find(t => t.value === asset.type)?.label.split(' ')[0] || '💻'} {asset.type || 'Notebook'}
+                    <span className="px-2.5 py-1 bg-slate-100 text-slate-700 border border-slate-200 rounded-lg text-xs font-medium inline-flex items-center gap-1.5 whitespace-nowrap">
+                      <span>{ASSET_TYPES.find(t => t.value === asset.type)?.label.split(' ')[0] || '💻'}</span>
+                      <span>{asset.type || 'Notebook'}</span>
                     </span>
                   </td>
 
                   <td className="p-4 text-slate-600">{asset.brand || '-'}</td>
-                  {/* 🟢 แสดงรหัสทรัพย์สินในตารางอย่างเป็นระเบียบสวยงาม */}
                   <td className="p-4 text-slate-700 font-mono text-xs font-semibold">{asset.asset_code || '-'}</td>
                   <td className="p-4 text-slate-500 font-mono text-xs">{asset.serial_number || '-'}</td>
                   <td className="p-4 text-slate-500 font-mono text-xs">{asset.contract_number || '-'}</td>
@@ -267,13 +266,13 @@ export default function AssetTable() {
                         onClick={() => openModal(asset)}
                         className="text-xs text-blue-600 hover:bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-md transition-colors font-semibold flex items-center gap-1"
                       >
-                        ✏️ แก้ไข
+                        ✏️
                       </button>
                       <button
                         onClick={() => handleDelete(asset.id, asset.name, asset.status)}
                         className="text-xs text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 px-2.5 py-1 rounded-md transition-colors font-semibold flex items-center gap-1"
                       >
-                        🗑️ ลบ
+                        🗑️
                       </button>
                     </div>
                   </td>
@@ -327,7 +326,6 @@ export default function AssetTable() {
 
               <div>
                 <label className="block text-xs font-bold uppercase text-slate-500 mb-1">รหัสทรัพย์สิน (Asset Code)</label>
-                {/* 🟢 แก้ไข: เปลี่ยนค่า value เป็น assetCode (CamelCase ตัวพิมพ์ใหญ่) เพื่อให้เชื่อมต่อกับ State ด้านบนถูกต้อง */}
                 <input type="text" value={assetCode} onChange={(e) => setAssetCode(e.target.value)} placeholder="เช่น AC-2026-001" className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500 font-mono text-slate-800" />
               </div>
 
