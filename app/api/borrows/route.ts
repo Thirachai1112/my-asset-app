@@ -17,6 +17,8 @@ export async function GET() {
       borrow_date,
       due_date,
       return_date,
+      quantity,
+      position,
       assets ( id, name, brand, contract_number, serial_number ),
       users ( id, full_name, emp_code )
     `)
@@ -36,15 +38,15 @@ export async function POST(request: Request) {
   try {
     const body = await request.json()
     
-    // 👈 ✅ แกะค่าตามโครงสร้างที่หน้าบ้านส่งมาจริง
+    // 👈 แกะค่าตามโครงสร้างที่หน้าบ้านส่งมาจริง
     const { 
-      
-      borrower_name, 
-      borrower_purpose, // หน้าบ้านส่งฟิลด์นี้มา
-      department, // หน้าบ้านส่งฟิลด์นี้มา
-      phone,      // หน้าบ้านส่งฟิลด์นี้มา
-      return_date, // หน้าบ้านส่งฟิลด์นี้มา (due_date)
-      items       // อาร์เรย์ของในตะกร้าครุภัณฑ์ [ { asset_id, ... }, ... ]
+      borrower_name,
+      position, 
+      borrower_purpose, 
+      department, 
+      phone, 
+      return_date, 
+      items // อาร์เรย์ของในตะกร้าครุภัณฑ์ [ { asset_id, quantity, ... }, ... ]
     } = body
 
     // Validation เบื้องต้น
@@ -63,6 +65,8 @@ export async function POST(request: Request) {
     // 🔄 วนลูปประมวลผลครุภัณฑ์ทีละชิ้นในตะกร้าสินค้า
     for (const item of items) {
       const currentAssetId = item.asset_id
+      // ดึงค่าจำนวนชิ้นจากหน้าบ้านมาเตรียมไว้ ถ้าไม่มีให้มองเป็น 1 ชิ้นเดฟอลต์
+      const currentQuantity = item.quantity || 1 
 
       // [ขั้นตอนเซฟตี้] เช็คก่อนว่าสินทรัพย์ชิ้นนี้ว่างจริงไหม
       const { data: assetCheck } = await supabase
@@ -72,10 +76,10 @@ export async function POST(request: Request) {
         .single()
 
       if (assetCheck && (assetCheck.status === 'Borrowed' || assetCheck.status === 'กำลังใช้งาน')) {
-        return NextResponse.json({ error: `อุปกรณ์ ${item.asset_code} ถูกยืมไปแล้ว ไม่สามารถยืมซ้ำได้` }, { status: 400 })
+        return NextResponse.json({ error: `อุปกรณ์ ${item.name || 'ชิ้นนี้'} ถูกยืมไปแล้ว ไม่สามารถยืมซ้ำได้` }, { status: 400 })
       }
 
-      // ตั๋วที่ 1: บันทึกข้อมูลลงตาราง borrows ของชิ้นนั้น ๆ
+      // บันทึกข้อมูลลงตาราง borrows ของชิ้นนั้น ๆ 
       const { data: borrowData, error: borrowError } = await supabase
         .from('borrows')
         .insert([
@@ -84,11 +88,13 @@ export async function POST(request: Request) {
             user_id: null,
             asset_id: currentAssetId,
             borrower_name: borrower_name,
-            borrower_dept: department || null, // จับคู่ฟิลด์หน้าบ้าน -> หลังบ้าน
-            phone: phone || null,             // บันทึกเบอร์โทรศัพท์ลงฐานข้อมูล
+            position: position || null,
+            borrower_dept: department || null, 
+            phone: phone || null,            
             purpose: borrower_purpose || null,
             borrow_date: new Date().toISOString(),
-            due_date: return_date ? new Date(return_date).toISOString() : null // ใช้กำหนดวันส่งคืนจากหน้าบ้าน
+            due_date: return_date ? new Date(return_date).toISOString() : null,
+            quantity: currentQuantity // 🎯 บันทึกจำนวนชิ้นลงคอลัมน์ quantity ในตาราง borrows ตรงๆ เลยครับช่าง!
           }
         ])
         .select()
@@ -97,13 +103,15 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: `เกิดข้อผิดพลาดในการบันทึก: ${borrowError.message}` }, { status: 500 })
       }
 
-      // ตั๋วที่ 2: เปลี่ยนสถานะในตาราง assets ให้เป็น 'Borrowed' ทันที
+      // เปลี่ยนสถานะในตาราง assets ให้เป็น 'Borrowed' ทันที
       await supabase
         .from('assets')
         .update({ status: 'Borrowed' })
         .eq('id', currentAssetId)
 
-      insertedBorrows.push(borrowData[0])
+      if (borrowData && borrowData.length > 0) {
+        insertedBorrows.push(borrowData[0])
+      }
     }
 
     return NextResponse.json({ 

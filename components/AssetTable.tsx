@@ -1,4 +1,3 @@
-// components/AssetTable.tsx
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -25,6 +24,12 @@ export default function AssetTable() {
   // ➕ State สำหรับเก็บคำค้นหา
   const [searchTerm, setSearchTerm] = useState('')
 
+  // 🔢 ==========================================
+  // ⚙️ ระบบคำนวณและเก็บสถานะ Pagination (หน้าละ 5 รายการ)
+  // ==========================================
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 5
+
   // States สำหรับควบคุม Modal
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingAsset, setEditingAsset] = useState<any | null>(null)
@@ -38,16 +43,20 @@ export default function AssetTable() {
   const [status, setStatus] = useState('Available')
   const [type, setType] = useState('Notebook') 
 
+  // 🔄 ฟังก์ชันดึงข้อมูลทรัพย์สินหลัก
   const fetchAssets = async () => {
     setLoading(true)
     try {
       const res = await fetch('/api/assets')
       const json = await res.json()
-      if (json.success) setAssets(json.data)
+      if (json.success) {
+        setAssets(json.data || json.assets || [])
+      }
     } catch (err) {
-      console.error('Error:', err)
+      console.error('Error fetching assets:', err)
     } finally {
-      loading && setLoading(false)
+      // 🎯 แก้บั๊กจุดค้าง: บังคับเปลี่ยนสถานะโหลดเป็นเท็จเสมอ ไม่ว่าจะเกิดอะไรขึ้นหน้าจอต้องไม่ค้าง
+      setLoading(false)
     }
   }
 
@@ -97,7 +106,7 @@ export default function AssetTable() {
     }
   }
 
-  // ➕ ลоจิกการกรองข้อมูลในตาราง
+  // ➕ ลอจิกการกรองข้อมูลในตาราง
   const filteredAssets = assets.filter((asset) => {
     const searchLower = searchTerm.toLowerCase().trim()
     if (!searchLower) return true
@@ -111,6 +120,14 @@ export default function AssetTable() {
       asset.contract_number?.toLowerCase().includes(searchLower)
     )
   })
+
+  // ✂️ คำนวณขอบเขตข้อมูลที่จะตัดมาแสดงเฉพาะหน้านั้นๆ (Slice 5 ชิ้น)
+  const indexOfLastItem = currentPage * itemsPerPage
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage
+  const currentAssets = filteredAssets.slice(indexOfFirstItem, indexOfLastItem)
+
+  // 🔢 คำนวณจำนวนหน้าทั้งหมดจากผลลัพธ์ที่ฟิลเตอร์แล้ว
+  const totalPages = Math.ceil(filteredAssets.length / itemsPerPage)
 
   // ✏️ เปิด Modal และดึงค่าเก่ามาหยอดใส่ฟอร์ม
   const openModal = (asset: any | null = null) => {
@@ -136,9 +153,13 @@ export default function AssetTable() {
     setIsModalOpen(true)
   }
 
+  // 💾 ฟังก์ชันบันทึกข้อมูล (เพิ่ม/แก้ไข)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!name.trim()) return alert('กรุณากรอกชื่อครุภัณฑ์')
+    if (!name.trim()) {
+      Swal.fire({ icon: 'warning', title: 'คำเตือน', text: 'กรุณากรอกชื่อครุภัณฑ์' })
+      return
+    }
 
     const finalAssetCode = assetCode.trim() === "" ? null : assetCode.trim()
     const finalSerialNumber = serialNumber.trim() === "" ? null : serialNumber.trim()
@@ -166,14 +187,24 @@ export default function AssetTable() {
 
       const json = await res.json()
       if (json.success) {
-        setIsModalOpen(false)
-        fetchAssets()
+        setIsModalOpen(false) // 1. สั่งปิดม่าน Modal ทันทีป้องกันแผ่นค้างบังหน้าจอ
+        setEditingAsset(null)
+
+        // 2. แจ้งเตือน และสั่ง Re-fetch ข้อมูลเข้าตารางหลังจากหน้าต่างนี้เคลียร์ตัวเองแล้ว
+        Swal.fire({
+          icon: 'success',
+          title: editingAsset ? 'อัปเดตข้อมูลสำเร็จ' : 'เพิ่มอุปกรณ์สำเร็จ',
+          timer: 1500,
+          showConfirmButton: false
+        }).then(() => {
+          fetchAssets() // โหลดตารางใหม่แบบลื่นๆ เลยครับช่าง
+        })
       } else {
-        alert(json.error || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล')
+        Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: json.error || 'ไม่สามารถบันทึกข้อมูลได้' })
       }
     } catch (err) {
       console.error(err)
-      alert('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้')
+      Swal.fire({ icon: 'error', title: 'ล้มเหลว', text: 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้' })
     }
   }
 
@@ -204,13 +235,19 @@ export default function AssetTable() {
           <input
             type="text"
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => {
+              setSearchTerm(e.target.value)
+              setCurrentPage(1)
+            }}
             placeholder="ค้นหาด้วย ชื่อ, แบรนด์, ประเภท, S/N..."
             className="w-full bg-slate-50 border border-slate-200 hover:border-slate-300 focus:border-blue-500 rounded-xl pl-9 pr-4 py-2 text-sm focus:outline-none transition-colors text-slate-800"
           />
           {searchTerm && (
             <button
-              onClick={() => setSearchTerm('')}
+              onClick={() => {
+                setSearchTerm('')
+                setCurrentPage(1)
+              }}
               className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600 text-xs font-bold"
             >
               ล้าง
@@ -219,7 +256,7 @@ export default function AssetTable() {
         </div>
       </div>
 
-      {/* 🧱 ตารางแสดงข้อมูลแบบคลีน (เอาเส้นตั้งออกทั้งหมดแล้ว) */}
+      {/* 🧱 ตารางแสดงข้อมูล */}
       <div className="overflow-x-auto border border-slate-200 rounded-xl bg-white shadow-sm">
         <table className="w-full text-left border-collapse">
           <thead>
@@ -236,13 +273,12 @@ export default function AssetTable() {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 text-sm">
-            {filteredAssets.length > 0 ? (
-              filteredAssets.map((asset, index) => (
+            {currentAssets.length > 0 ? (
+              currentAssets.map((asset, index) => (
                 <tr key={asset.id} className="hover:bg-slate-50/50 transition-colors">
-                  <td className="p-4 text-center text-slate-400 font-mono text-xs">{index + 1}</td>
+                  <td className="p-4 text-center text-slate-400 font-mono text-xs">{indexOfFirstItem + index + 1}</td>
                   <td className="p-4 font-semibold text-slate-900">{asset.name}</td>
 
-                  {/* 🛠️ ช่องประเภท: เอา border-r ออก และใช้ inline-flex + whitespace-nowrap ป้องกันคำเด้งตกบรรทัด */}
                   <td className="p-4">
                     <span className="px-2.5 py-1 bg-slate-100 text-slate-700 border border-slate-200 rounded-lg text-xs font-medium inline-flex items-center gap-1.5 whitespace-nowrap">
                       <span>{ASSET_TYPES.find(t => t.value === asset.type)?.label.split(' ')[0] || '💻'}</span>
@@ -287,15 +323,67 @@ export default function AssetTable() {
         </table>
       </div>
 
-      {/* หน้าต่างป๊อปอัปฟอร์ม (Modal) */}
+      {/* 🔢 ส่วนควบคุมปุ่มกดแบ่งหน้า */}
+      {totalPages > 1 && (
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mt-4 px-2 gap-3">
+          <p className="text-xs text-slate-500 text-center sm:text-left">
+            แสดง {indexOfFirstItem + 1} ถึง {Math.min(indexOfLastItem, filteredAssets.length)} จากทั้งหมด {filteredAssets.length} รายการ
+          </p>
+          
+          <div className="flex items-center justify-center space-x-1.5">
+            <button
+              type="button"
+              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              className="px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-medium bg-white hover:bg-slate-50 text-slate-600 transition-colors disabled:opacity-40 disabled:hover:bg-white"
+            >
+              ก่อนหน้า
+            </button>
+
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+              <button
+                key={page}
+                type="button"
+                onClick={() => setCurrentPage(page)}
+                className={`w-7 h-7 flex items-center justify-center border rounded-lg text-xs font-semibold transition-colors ${
+                  currentPage === page
+                    ? "bg-blue-600 border-blue-600 text-white shadow-sm"
+                    : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+                }`}
+              >
+                {page}
+              </button>
+            ))}
+
+            <button
+              type="button"
+              onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages}
+              className="px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-medium bg-white hover:bg-slate-50 text-slate-600 transition-colors disabled:opacity-40 disabled:hover:bg-white"
+            >
+              ถัดไป
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 🌟 หน้าต่างป๊อปอัปฟอร์ม (Modal) นำกลับมาใส่ให้ครบถ้วนแล้วครับช่าง */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div 
+          className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-[9999] p-4 pointer-events-auto"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setIsModalOpen(false)
+              setEditingAsset(null)
+            }
+          }}
+        >
           <div className="bg-white rounded-2xl w-full max-w-md shadow-xl border border-slate-100 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             <div className="bg-slate-50 border-b border-slate-100 px-6 py-4 flex justify-between items-center">
               <h4 className="font-bold text-slate-900 text-base">
                 {editingAsset ? '📝 แก้ไขข้อมูลครุภัณฑ์' : '➕ เพิ่มครุภัณฑ์ใหม่'}
               </h4>
-              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600 text-lg">×</button>
+              <button onClick={() => { setIsModalOpen(false); setEditingAsset(null); }} className="text-slate-400 hover:text-slate-600 text-lg">×</button>
             </div>
 
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
@@ -340,7 +428,7 @@ export default function AssetTable() {
               </div>
 
               <div className="flex space-x-3 pt-4 border-t border-slate-100">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="w-1/2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold py-2 rounded-xl text-sm transition-colors" >ยกเลิก</button>
+                <button type="button" onClick={() => { setIsModalOpen(false); setEditingAsset(null); }} className="w-1/2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold py-2 rounded-xl text-sm transition-colors" >ยกเลิก</button>
                 <button type="submit" className="w-1/2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-xl text-sm shadow-sm transition-colors" >{editingAsset ? 'อัปเดตข้อมูล' : 'บันทึกข้อมูล'}</button>
               </div>
             </form>

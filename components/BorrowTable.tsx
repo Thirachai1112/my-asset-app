@@ -10,7 +10,7 @@ export default function BorrowTable() {
 
   // 🔢 1. จัดการระบบแบ่งหน้า (Pagination States)
   const [currentPage, setCurrentPage] = useState(1)
-  const itemsPerPage = 10 // บังคับแสดงผลหน้าละ 10 แถว
+  const itemsPerPage = 5 // บังคับแสดงผลหน้าละ 10 แถว
 
   const fetchBorrows = async () => {
     setLoading(true)
@@ -64,7 +64,7 @@ export default function BorrowTable() {
     }
   }
 
-  // 🔍 ตัวจัดการพิมพ์ค้นหา (เมื่อพิมพ์ ให้เด้งกลับไปหน้า 1 เสมอเพื่อกันบั๊กข้อมูลไม่ครบหน้า)
+  // 🔍 ตัวจัดการพิมพ์ค้นหา
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value)
     setCurrentPage(1)
@@ -100,7 +100,8 @@ export default function BorrowTable() {
   if (loading) return <div className="p-12 text-center text-slate-400 animate-pulse">กำลังโหลดประวัติการยืม...</div>
 
   return (
-    <div className="p-6">
+    /* 🌟 ปรับ Container นอกสุดให้กางขยายได้กว้างเต็มหน้าจอ */
+    <div className="p-4 md:p-6 w-full max-w-full mx-auto">
       {/* ส่วนหัวแผงควบคุม */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
         <div>
@@ -123,23 +124,25 @@ export default function BorrowTable() {
         </div>
       </div>
 
-      {/* โครงสร้างตารางหลัก */}
-      <div className="overflow-x-auto border border-slate-100 rounded-xl bg-white shadow-sm">
-        <table className="w-full text-left border-collapse">
+      {/* โครงสร้างตารางหลัก - 🌟 เพิ่มระบบจัดการ Scroll แนวนอนอัจฉริยะ */}
+      <div className="w-full overflow-x-auto border border-slate-100 rounded-xl bg-white shadow-sm">
+        {/* 🌟 บังคับความกว้างขั้นต่ำ 1280px และใช้ table-fixed เพื่อล็อกขนาดคอลัมน์ไม่ให้เพี้ยน */}
+        <table className="w-full min-w-[1280px] text-left border-collapse table-fixed">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 text-xs uppercase font-bold tracking-wider">
               {[
-                { text: "ลำดับ", className: "p-4 w-16 text-center" },
-                { text: "ชื่อผู้ยืม", className: "p-4" },
-                { text: "แผนก", className: "p-4" },
-                { text: "อุปกรณ์ที่ยืม", className: "p-4" },
-                { text: "ประเภท", className: "p-4" },
-                { text: "Serial Number", className: "p-4" },
-                { text: "วันที่ยืม", className: "p-4" },
-                { text: "กำหนดคืน", className: "p-4" },
-                { text: "เบอร์ติดต่อ", className: "p-4 text-center" },
-                { text: "สถานะการคืน", className: "p-4 text-center" },
-                { text: "จัดการ", className: "p-4 text-center" }
+                { text: "ลำดับ", className: "p-3 w-16 text-center" },
+                { text: "ชื่อผู้ยืม", className: "p-3 w-44" },
+                { text: "แผนก", className: "p-3 w-32" },
+                { text: "อุปกรณ์ที่ยืม", className: "p-3 w-56" },
+                { text: "จำนวน", className: "p-3 w-24 text-center" }, 
+                { text: "ประเภท", className: "p-3 w-32" },
+                { text: "Serial Number", className: "p-3 w-40" },
+                { text: "วันที่ยืม", className: "p-3 w-28" },
+                { text: "กำหนดคืน", className: "p-3 w-28" },
+                { text: "เบอร์ติดต่อ", className: "p-3 w-32 text-center" },
+                { text: "สถานะการคืน", className: "p-3 w-32 text-center" },
+                { text: "จัดการ", className: "p-3 w-28 text-center" }
               ].map((header, i) => (
                 <th key={i} className={header.className}>
                   {header.text}
@@ -147,34 +150,42 @@ export default function BorrowTable() {
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 text-sm">
+          <tbody className="divide-y divide-slate-100 text-xs sm:text-sm">
             {currentRows.length > 0 ? (
               currentRows.map((borrow, index) => (
                 <tr key={borrow.id} className="hover:bg-slate-50/50 transition-colors">
-                  {/* 💡 คำนวณรหัสลำดับให้รันต่อกันเมื่อเปลี่ยนหน้าอย่างถูกต้อง (เช่น หน้า 2 จะเริ่มที่ 11) */}
-                  <td className="p-4 text-center text-slate-400 font-mono text-xs">
+                  <td className="p-3 text-center text-slate-400 font-mono text-xs">
                     {indexOfFirstItem + index + 1}
                   </td>
-                  <td className="p-4 font-semibold text-slate-900">{borrow.borrower_name}</td>
-                  <td className="p-4 text-slate-600">{borrow.borrower_dept || '-'}</td>
-                  <td className="p-4 font-medium text-slate-800">{borrow.assets?.name || 'ไม่พบข้อมูลอุปกรณ์'}</td>
-                  <td className="p-4 text-slate-500 font-mono text-xs">{borrow.assets?.type || '-'}</td>
-                  <td className="p-4 text-slate-500 font-mono text-xs">{borrow.assets?.serial_number || '-'}</td>
-                  <td className="p-4 text-slate-500 text-xs">{new Date(borrow.borrow_date).toLocaleDateString('th-TH')}</td>
-                  <td className="p-4 text-slate-500 text-xs">{borrow.due_date ? new Date(borrow.due_date).toLocaleDateString('th-TH') : '-'}</td>
-                  <td className="p-4 text-center text-slate-700 font-mono text-xs font-medium">{borrow.phone || '-'}</td>
-                  <td className="p-4 text-center">
-                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${
+                  {/* 🌟 ล็อกขนาดคำ ยาวยังไงก็ไม่ดันตารางพัง */}
+                  <td className="p-3 font-semibold text-slate-900 break-words">{borrow.borrower_name}</td>
+                  <td className="p-3 text-slate-600 break-words">{borrow.borrower_dept || '-'}</td>
+                  <td className="p-3 font-medium text-slate-800 break-words">{borrow.assets?.name || 'ไม่พบข้อมูลอุปกรณ์'}</td>
+                  
+                  <td className="p-3 text-center">
+                    <span className="inline-flex items-center px-2.5 py-0.5 bg-blue-50 text-blue-700 rounded-md font-bold text-xs border border-blue-100 whitespace-nowrap">
+                      {borrow.quantity || 1} ชิ้น
+                    </span>
+                  </td>
+
+                  <td className="p-3 text-slate-500 font-mono text-xs truncate">{borrow.assets?.type || '-'}</td>
+                  <td className="p-3 text-slate-500 font-mono text-xs truncate">{borrow.assets?.serial_number || '-'}</td>
+                  <td className="p-3 text-slate-500 text-xs whitespace-nowrap">{new Date(borrow.borrow_date).toLocaleDateString('th-TH')}</td>
+                  <td className="p-3 text-slate-500 text-xs whitespace-nowrap">{borrow.due_date ? new Date(borrow.due_date).toLocaleDateString('th-TH') : '-'}</td>
+                  <td className="p-3 text-center text-slate-700 font-mono text-xs font-medium truncate">{borrow.phone || '-'}</td>
+                  <td className="p-3 text-center">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border whitespace-nowrap ${
                       borrow.return_date ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'
                     }`}>
                       {borrow.return_date ? '● คืนแล้ว' : '● กำลังยืมอยู่'}
                     </span>
                   </td>
-                  <td className="p-4 text-center">
+                  {/* 🌟 คอลัมน์จัดการขวาสุด ล็อกไม่ให้ข้อความแตกบรรทัด เห็นปุ่มชัดเจน */}
+                  <td className="p-3 text-center whitespace-nowrap">
                     {!borrow.return_date ? (
                       <button
                         onClick={() => handleReturn(borrow.id, borrow.assets?.id)}
-                        className="px-3 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 rounded-lg text-xs font-medium transition-colors shadow-sm active:scale-95"
+                        className="px-2.5 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 rounded-lg text-xs font-semibold transition-colors shadow-sm active:scale-95 inline-flex items-center justify-center min-w-[75px]"
                       >
                         ↩️ คืนของ
                       </button>
@@ -188,7 +199,7 @@ export default function BorrowTable() {
               ))
             ) : (
               <tr>
-                <td colSpan={11} className="p-8 text-center text-slate-400">❌ ไม่พบประวัติการยืมที่ตรงกับเงื่อนไข</td>
+                <td colSpan={12} className="p-8 text-center text-slate-400">❌ ไม่พบประวัติการยืมที่ตรงกับเงื่อนไข</td>
               </tr>
             )}
           </tbody>

@@ -13,12 +13,14 @@ export async function GET() {
         id,
         doc_id,
         borrower_name,
+        position,
         borrower_dept,
         phone,
         purpose,
         borrow_date,
         due_date,
         return_date,
+        quantity,
         assets ( id, name, brand, contract_number, serial_number, type )
       `
     )
