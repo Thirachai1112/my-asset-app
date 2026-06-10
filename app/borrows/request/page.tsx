@@ -34,7 +34,7 @@ const ASSET_TYPES: { [key: string]: string } = {
     Printer: "🖨️",
     Scanner: "📑",
     UPS: "🔋",
-    Router: "🌐",
+    network: "🌐",
     Camera: "📷",
     Other: "🛠️"
 };

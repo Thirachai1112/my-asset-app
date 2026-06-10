@@ -12,7 +12,7 @@ const ASSET_TYPES = [
   { value: 'Projector', label: '📹 โปรเจกเตอร์ (Projector)' },
   { value: 'Printer', label: '🖨️ เครื่องพิมพ์ (Printer)' },
   { value: 'UPS', label: '🔋 เครื่องสำรองไฟ (UPS)' },
-  { value: 'Router', label: '🌐 อุปกรณ์เน็ตเวิร์ก (Router/Switch)' },
+  { value: 'Router', label: '🌐 อุปกรณ์เน็ตเวิร์ก (network)' },
   { value: 'Wiring set', label: '🔌 ชุดสายไฟ (Wiring set)' },
   { value: 'Hand tools', label: '🛠️ เครื่องมือช่าง (Hand tools)' }
 ]
