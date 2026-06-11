@@ -1,42 +1,57 @@
 import { NextResponse } from 'next/server'
-// 💡 ใช้ utils/supabase/server ตามโครงสร้างที่ถูกต้องของช่าง
 import { createClient } from '@/utils/supabase/server' 
 
-// 🟢 1. ขาดึงข้อมูลประวัติยืม-คืน (หน้าบ้านยิงมาตอนโหลดตาราง)
 export async function GET() {
   try {
     const supabase = await createClient()
 
-    const { data: borrows, error } = await supabase
+    // 1. ดึงข้อมูลรายการยืม (Borrows) และอุปกรณ์ (Assets)
+    const { data: borrows, error: borrowError } = await supabase
       .from('borrows')
       .select(`
-        id,
-        doc_id,
-        borrower_name,
-        position,
-        borrower_dept,
-        phone,
-        purpose,
-        borrow_date,
-        due_date,
-        return_date,
-        quantity,
-        assets ( id, name, brand, contract_number, serial_number, type )
-      `
-    )
-      .order('borrow_date', { ascending: false })
+        *,
+        assets ( id, name, brand, serial_number, type )
+      `)
+      .order('id', { ascending: false })
 
-    if (error) {
-      return NextResponse.json({ success: false, error: error.message }, { status: 500 })
-    }
+    if (borrowError) throw borrowError
 
-    return NextResponse.json({ success: true, history: borrows })
+    // 2. ดึงข้อมูลเอกสารทั้งหมด (Documents) โดยดึงทุกคอลัมน์มาดูก่อน
+    const { data: documents, error: docError } = await supabase
+      .from('documents')
+      .select('*')
+
+    if (docError) throw docError
+
+    // 3. รวมร่างข้อมูลด้วยลอจิก "เช็กทุกคอลัมน์ที่น่าจะเป็น ID เชื่อม"
+    const historyWithDocs = borrows.map((borrow) => {
+      // ตรงนี้คือหัวใจสำคัญ: สแกนว่าในตารางเอกสาร มีแถวไหนที่เลข ID ตรงกับรายการยืมนี้บ้าง
+      const linkedDocuments = documents.filter((doc) => {
+        const borrowId = Number(borrow.id)
+        return (
+          Number(doc.borrow_id) === borrowId || 
+          Number(doc.borrow_id_int) === borrowId
+        )
+      })
+
+      return {
+        ...borrow,
+        documents: linkedDocuments,
+        // ส่ง file_url ตรงไปให้หน้าบ้านเช็กง่ายๆ
+        file_url: linkedDocuments.length > 0 ? linkedDocuments[0].file_url : null
+      }
+    })
+
+    return NextResponse.json({ success: true, history: historyWithDocs })
   } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 })
+    console.error('❌ API Error Detail:', err)
+    return NextResponse.json(
+      { success: false, error: err.message || 'Server Error' }, 
+      { status: 500 }
+    )
   }
 }
 
-// 🔵 2. ขาอัปเดตสถานะตอนกดปุ่ม "คืนของ"
 export async function PATCH(request: Request) {
   try {
     const supabase = await createClient()
@@ -46,7 +61,7 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ success: false, error: 'ข้อมูลไม่ครบถ้วน' }, { status: 400 })
     }
 
-    // ตั๋วที่ 1: มาร์ควันเวลาคืนในประวัติการยืม
+    // อัปเดตวันที่คืน
     const { error: borrowError } = await supabase
       .from('borrows')
       .update({ return_date: new Date().toISOString() })
@@ -54,7 +69,7 @@ export async function PATCH(request: Request) {
 
     if (borrowError) throw borrowError
 
-    // ตั๋วที่ 2: ปรับสถานะครุภัณฑ์ในตลังให้กลับมาพร้อมใช้งาน (Available)
+    // อัปเดตสถานะอุปกรณ์
     const { error: assetError } = await supabase
       .from('assets')
       .update({ status: 'Available' })
@@ -62,10 +77,8 @@ export async function PATCH(request: Request) {
 
     if (assetError) throw assetError
 
-    return NextResponse.json({ success: true, message: 'บันทึกการคืนครุภัณฑ์เรียบร้อย' })
-
+    return NextResponse.json({ success: true, message: 'บันทึกสำเร็จ' })
   } catch (error: any) {
-    console.error('Return process error:', error.message)
     return NextResponse.json({ success: false, error: error.message }, { status: 500 })
   }
 }

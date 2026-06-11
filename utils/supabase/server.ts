@@ -19,7 +19,7 @@ export async function createClient() {
               cookieStore.set(name, value, options)
             )
           } catch {
-            // บริหารจัดการใน Server Component (บางครั้ง Next.js จะบ่นเรื่องการเซ็ตคุกกี้ในหน้าเว็บที่แคชไว้)
+            // บริหารจัดการใน Server Component
           }
         },
       },
