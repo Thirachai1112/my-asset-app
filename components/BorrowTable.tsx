@@ -25,10 +25,14 @@ export default function BorrowTable() {
   const [searchTerm, setSearchTerm] = useState('')
   const [uploadingId, setUploadingId] = useState<number | null>(null) // เช็กสถานะการอัปโหลดแต่ละแถว
 
+  // 🔔 เพิ่ม State สำหรับเก็บรายการที่ต้องตามงาน
+  const [urgentItems, setUrgentItems] = useState<any[]>([])
+
   // 🔢 จัดการระบบแบ่งหน้า (Pagination States)
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 5
 
+  
   const fetchBorrows = async () => {
     setLoading(true)
     try {
@@ -39,7 +43,17 @@ export default function BorrowTable() {
       console.log("📡 ข้อมูลดิบจาก API หลังบ้านที่ส่งมาถึงหน้าบ้าน:", json)
 
       if (json.success) {
-        setBorrows(json.history || json.data || [])
+        const data = json.history || json.data || []
+        setBorrows(data)
+
+        // 🔎 คำนวณหารายการที่ต้องตามคืน (เลยกำหนดหรือเหลือเวลา 2 วัน)
+        const today = new Date()
+        const urgent = data.filter((b: any) => {
+          if (b.return_date || !b.due_date) return false
+          const diffDays = (new Date(b.due_date).getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+          return diffDays <= 2 // เตือนถ้าเหลือเวลา <= 2 วัน หรือเลยกำหนดไปแล้ว
+        })
+        setUrgentItems(urgent)
       }
     } catch (err) {
       console.error('Error:', err)
@@ -200,6 +214,19 @@ export default function BorrowTable() {
 
   return (
     <div className="p-4 md:p-6 w-full max-w-full mx-auto">
+      
+      {/* 🚨 แผงแจ้งเตือนรายการที่ต้องตามงาน */}
+      {urgentItems.length > 0 && (
+        <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-6 rounded-r-xl shadow-sm animate-pulse">
+          <h4 className="text-red-700 font-bold text-sm">🔔 ต้องติดตามคืนด่วน ({urgentItems.length} รายการ)</h4>
+          <div className="text-xs text-red-600 mt-2 space-y-1">
+            {urgentItems.map((item) => (
+              <p key={item.id}>• <strong>{item.borrower_name}</strong> ยืม {item.assets?.name} (กำหนด: {new Date(item.due_date).toLocaleDateString('th-TH')})</p>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* ส่วนหัวแผงควบคุม */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
         <div>
@@ -247,11 +274,15 @@ export default function BorrowTable() {
           </thead>
           <tbody className="divide-y divide-slate-100 text-xs sm:text-sm">
             {currentRows.length > 0 ? (
-              currentRows.map((borrow, index) => (
-                <tr key={borrow.id} className="hover:bg-slate-50/50 transition-colors">
-                  <td className="p-3 text-center text-slate-400 font-mono text-xs">
-                    {indexOfFirstItem + index + 1}
-                  </td>
+              currentRows.map((borrow, index) => {
+                const isUrgent = !borrow.return_date && borrow.due_date && 
+                  (new Date(borrow.due_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24) <= 2;
+
+                return (
+                  <tr key={borrow.id} className={`hover:bg-slate-50/50 transition-colors ${isUrgent ? 'bg-red-50' : ''}`}>
+                    <td className="p-3 text-center text-slate-400 font-mono text-xs">
+                      {indexOfFirstItem + index + 1}
+                    </td>
                   <td className="p-3 font-semibold text-slate-900 break-words">{borrow.borrower_name}</td>
                   <td className="p-3 text-slate-600 break-words">{borrow.borrower_dept || '-'}</td>
                   <td className="p-3 font-medium text-slate-800 break-words">{borrow.assets?.name || 'ไม่พบข้อมูลอุปกรณ์'}</td>
@@ -318,7 +349,8 @@ export default function BorrowTable() {
                     </div>
                   </td>
                 </tr>
-              ))
+                );
+              })
             ) : (
               <tr>
                 <td colSpan={12} className="p-8 text-center text-slate-400">❌ ไม่พบประวัติการยืมที่ตรงกับเงื่อนไข</td>

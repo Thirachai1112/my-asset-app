@@ -14,7 +14,9 @@ const ASSET_TYPES = [
   { value: 'UPS', label: '🔋 เครื่องสำรองไฟ (UPS)' },
   { value: 'network', label: '🌐 อุปกรณ์เน็ตเวิร์ก (network)' },
   { value: 'Wiring set', label: '🔌 ชุดสายไฟ (Wiring set)' },
-  { value: 'Hand tools', label: '🛠️ เครื่องมือช่าง (Hand tools)' }
+  { value: 'Hand tools', label: '🛠️ เครื่องมือช่าง (Hand tools)' },
+  { value: 'Signalcable', label: '🔌 สายสัญญาณ (Signalcable)' },
+  {value: 'microphone', label: '🎤 ไมโครโฟน (Microphone)' }
 ]
 
 export default function AssetTable() {

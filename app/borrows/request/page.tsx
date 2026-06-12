@@ -36,7 +36,10 @@ const ASSET_TYPES: { [key: string]: string } = {
     UPS: "🔋",
     network: "🌐",
     Camera: "📷",
-    Other: "🛠️"
+    Other: "🛠️",
+    microphone: "🎤",
+    Signalcable: "🔌",
+    "Wiring set": "🔌"
 };
 
 export default function BorrowRequestPage() {
