@@ -47,39 +47,38 @@ export default function PortalPage() {
               ส่งคำขอยืมอุปกรณ์
             </h2>
             <p className="text-slate-400 text-sm mt-2 leading-relaxed">
-              บันทึกการส่งซ่อม ติดตามขั้นตอนของช่างซ่อม เบิกจ่ายอะไหล่จากคลัง และสรุปยอดค่าใช้จ่ายในงานซ่อมบำรุง
+              ทำการสร้างรายการยืมอุปกรณ์ครุภัณฑ์ เลือกอุปกรณ์ที่ต้องการยืม ระบุผู้ยืมและวัตถุประสงค์ พร้อมพิมพ์เอกสารใบยืม (PDF) ได้ทันที
             </p>
           </div>
         </Link>
 
-        {/* การ์ดระบบจัดการการซ่อม */}
-        <Link href="/repairs" className="group bg-slate-800 hover:bg-slate-750 border border-slate-700/50 hover:border-amber-500/50 rounded-2xl p-8 transition-all duration-300 shadow-xl hover:shadow-amber-950/20 flex flex-col justify-between text-left">
+       
+
+        {/* การ์ดประวัติการซ่อม สำหรับดูข้อมูล */}
+        <Link href="/repairs?tab=history" className="group bg-slate-800 hover:bg-slate-750 border border-slate-700/50 hover:border-amber-500/50 rounded-2xl p-8 transition-all duration-300 shadow-xl hover:shadow-amber-950/20 flex flex-col justify-between text-left">
           <div>
             <div className="w-12 h-12 rounded-xl bg-amber-500/10 flex items-center justify-center text-2xl mb-6 border border-amber-500/20 group-hover:bg-amber-500 group-hover:text-white transition-colors duration-300">
-              🛠️
+              📜
             </div>
             <h2 className="text-2xl font-bold text-white group-hover:text-amber-400 transition-colors">
-              การซ่อม / อะไหล่
+              จัดการงานซ่อมทั้งหมด
             </h2>
             <p className="text-slate-400 text-sm mt-2 leading-relaxed">
-              บันทึกการส่งซ่อม ติดตามขั้นตอนของช่างซ่อม เบิกจ่ายอะไหล่จากคลัง และสรุปยอดค่าใช้จ่ายในงานซ่อมบำรุง
+              ติดตามสถานะงานซ่อม ดูสรุปรายการซ่อมย้อนหลัง และตรวจสอบรายละเอียดการแก้ไขของแต่ละเคส
             </p>
           </div>
-          {/* <div className="mt-8 flex items-center text-sm font-semibold text-amber-400 group-hover:text-amber-300">
-            เข้าสู่ระบบงานซ่อม <span className="ml-2 transform group-hover:translate-x-1 transition-transform">→</span>
-          </div> */}
         </Link>
 
-        <Link href="/" className="group bg-slate-800 hover:bg-slate-750 border border-slate-700/50 hover:border-amber-500/50 rounded-2xl p-8 transition-all duration-300 shadow-xl hover:shadow-amber-950/20 flex flex-col justify-between text-left">
+        <Link href="/repairs/request" className="group bg-slate-800 hover:bg-slate-750 border border-slate-700/50 hover:border-amber-500/50 rounded-2xl p-8 transition-all duration-300 shadow-xl hover:shadow-amber-950/20 flex flex-col justify-between text-left">
           <div>
             <div className="w-12 h-12 rounded-xl bg-amber-500/10 flex items-center justify-center text-2xl mb-6 border border-amber-500/20 group-hover:bg-amber-500 group-hover:text-white transition-colors duration-300">
-              🛠️
+              🔧
             </div>
             <h2 className="text-2xl font-bold text-white group-hover:text-amber-400 transition-colors">
-              ส่งซ่อม
+              แจ้งซ่อมอุปกรณ์
             </h2>
             <p className="text-slate-400 text-sm mt-2 leading-relaxed">
-              ถ้าต้องการส่งซ่อมอุปกรณ์ที่มีปัญหา สามารถบันทึกข้อมูลการส่งซ่อม ได้ที่นี่
+              ถ้าต้องการส่งซ่อมอุปกรณ์ที่มีปัญหา สามารถบันทึกข้อมูลการส่งซ่อม และระบุอาการเบื้องต้นได้ที่นี่
             </p>
           </div>
           {/* <div className="mt-8 flex items-center text-sm font-semibold text-amber-400 group-hover:text-amber-300">
