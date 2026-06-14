@@ -27,7 +27,7 @@ export async function POST(request: Request) {
       stock_quantity, 
       unit_price, 
       part_brand, 
-      part_serial_umber, 
+      part_serial_number, 
       part_date_in 
     } = body
 
@@ -38,7 +38,7 @@ export async function POST(request: Request) {
         stock_quantity, 
         unit_price, 
         part_brand, 
-        part_serial_umber, 
+        part_serial_number, 
         part_date_in: part_date_in || new Date().toISOString()
       }])
       .select()

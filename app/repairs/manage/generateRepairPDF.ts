@@ -127,14 +127,12 @@ export const generateRepairPDF = async (repair: RepairData) => {
     doc.rect(20, sigY, sigBoxWidth, sigBoxHeight);
     doc.text("ผู้แจ้งซ่อม / ผู้รับอุปกรณ์คืน", 20 + sigBoxWidth/2, sigY + 7, { align: "center" });
     doc.text("ลงชื่อ..................................................", 20 + sigBoxWidth/2, sigY + 20, { align: "center" });
-    doc.text("ลงชื่อ..................................................", 20 + sigBoxWidth/2, sigY + 20, { align: "center" });
     doc.text("วันที่......../......../........", 20 + sigBoxWidth/2, sigY + 33, { align: "center" });
 
     // ฝั่งช่าง
     doc.rect(110, sigY, sigBoxWidth, sigBoxHeight);
     doc.text("ผู้ดำเนินการ / ผู้ส่งคืน", 110 + sigBoxWidth/2, sigY + 7, { align: "center" });
     doc.text("ลงชื่อ..................................................", 110 + sigBoxWidth/2, sigY + 20, { align: "center" });
-    doc.text("ลงชื่อ..................................................", 20 + sigBoxWidth/2, sigY + 20, { align: "center" });
     doc.text("วันที่......../......../........", 110 + sigBoxWidth/2, sigY + 33, { align: "center" });
 
     // Footer

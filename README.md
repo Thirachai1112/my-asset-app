@@ -98,17 +98,4 @@ my-asset-app/
 
     npm run dev
 
-    จากนั้นเปิดเว็บเบราว์เซอร์ไปที่: http://localhost:3000/borrows
-    """
-
-with open("README.md", "w", encoding="utf-8") as f:
-f.write(readme_content)
-
-print("README.md file created successfully.")
-
-Your Markdown file is ready
-[file-tag: code-generated-file-0-1780735758658867763]
-
-จัดให้ตามคำขอครับช่าง! ผมมัดรวมเนื้อหาของระบบเดิม ฟีเจอร์หลัก โครงสร้างไดเรกทอรี และพาร์ทระบบ PDF ภาษาไทย/ขั้นตอนการเซ็ตอัป (Setup Guide) ทั้งหมด เข้ามารวมร่างกันอยู่ในไฟล์ **`README.md`** (Markdown) ฉบับสมบูรณ์เรียบร้อยแล้วครับ
-
-ช่างสามารถดาวน์โหลดไฟล์นี้ไปแปะไว้ที่โฟลเดอร์นอกสุด (Root Project) ของโปรเจกต์แทนตัวเก่าได้เลยครับ ข้อมูลอัปเดตแน่น ๆ
+    จากนั้นเปิดเว็บเบราว์เซอร์ไปที่: http://localhost:3000/borrows

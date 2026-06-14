@@ -15,7 +15,7 @@ export async function PATCH(
       stock_quantity, 
       unit_price, 
       part_brand, 
-      part_serial_umber, 
+      part_serial_number, 
       part_date_in, 
       part_date_out 
     } = body
@@ -27,7 +27,7 @@ export async function PATCH(
         stock_quantity, 
         unit_price, 
         part_brand, 
-        part_serial_umber, 
+        part_serial_number, 
         part_date_in, 
         part_date_out 
       })

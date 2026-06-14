@@ -43,7 +43,7 @@ export default function SparePartsTable() {
       setEditingPart(part)
       setPartName(part.part_name || '')
       setPartBrand(part.part_brand || '')
-      setPartSN(part.part_serial_umber || '')
+      setPartSN(part.part_serial_number || '')
       setStockQuantity(part.stock_quantity || 0)
       setUnitPrice(part.unit_price || 0)
       setDateIn(part.part_date_in ? new Date(part.part_date_in).toISOString().split('T')[0] : '')
@@ -66,7 +66,7 @@ export default function SparePartsTable() {
     const bodyData = { 
       part_name: partName, 
       part_brand: partBrand,
-      part_serial_umber: partSN,
+      part_serial_number: partSN,
       stock_quantity: stockQuantity, 
       unit_price: unitPrice,
       part_date_in: dateIn || null,
@@ -120,7 +120,7 @@ export default function SparePartsTable() {
   const filteredParts = parts.filter(p => 
     p.part_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     p.part_brand?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.part_serial_umber?.toLowerCase().includes(searchTerm.toLowerCase())
+    p.part_serial_number?.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
   if (loading) return <div className="p-12 text-center text-slate-400 animate-pulse">กำลังโหลดคลังอะไหล่...</div>
@@ -174,7 +174,7 @@ export default function SparePartsTable() {
                     <div className="text-[10px] text-slate-400 font-medium uppercase">{part.part_brand || '-'}</div>
                   </td>
                   <td className="p-4 font-mono text-xs text-slate-500">
-                    {part.part_serial_umber || '-'}
+                    {part.part_serial_number || '-'}
                   </td>
                   <td className="p-4 text-center">
                      <span className={`px-2.5 py-1 rounded-lg font-bold text-[10px] border ${part.stock_quantity > 5 ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-red-50 text-red-700 border-red-100'}`}>
