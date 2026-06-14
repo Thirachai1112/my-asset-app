@@ -3,6 +3,9 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Swal from 'sweetalert2'
+import * as XLSX from 'xlsx'
+import { generateRepairPDF } from '@/app/repairs/manage/generateRepairPDF'
+import RepairDocumentUploader from './RepairDocumentUploader'
 
 const REPAIR_STATUS = [
   { value: 'Pending', label: '⏳ รอดำเนินการ (Pending)', color: 'bg-amber-50 text-amber-700 border-amber-200' },
@@ -14,6 +17,10 @@ export default function RepairTable() {
   const [repairs, setRepairs] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
+
+  // Filter states (Monthly Summary)
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1)
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1)
@@ -161,12 +168,163 @@ export default function RepairTable() {
 
   if (loading) return <div className="p-12 text-center text-slate-400 animate-pulse">กำลังโหลดข้อมูลการซ่อม...</div>
 
+  // คำนวณสรุปยอดรายเดือน (เฉพาะข้อมูลที่กรองตามเดือน/ปี)
+  const monthlyData = repairs.filter(r => {
+    const date = new Date(r.repair_date)
+    return (date.getMonth() + 1) === selectedMonth && date.getFullYear() === selectedYear
+  })
+
+  const summary = {
+    count: monthlyData.length,
+    parts: monthlyData.reduce((sum, r) => sum + (Number(r.total_parts_cost) || 0), 0),
+    partsQty: monthlyData.reduce((sum, r) => sum + (Number(r.total_parts_qty) || 0), 0),
+    service: monthlyData.reduce((sum, r) => sum + (Number(r.service_price) || 0), 0),
+    total: monthlyData.reduce((sum, r) => sum + (Number(r.grand_total) || 0), 0),
+    // 📊 เพิ่มการจำแนกตามประเภทอุปกรณ์
+    countsByType: monthlyData.reduce((acc: any, r) => {
+      const type = r.item?.type_item || 'ไม่ระบุประเภท'
+      acc[type] = (acc[type] || 0) + 1
+      return acc
+    }, {})
+  }
+
+  const exportToExcel = () => {
+    try {
+      // 1. เตรียมข้อมูลสำหรับ Sheet รายละเอียด
+      const detailedData = monthlyData.map((r, index) => ({
+        'ลำดับ': index + 1,
+        'วันที่แจ้งซ่อม': new Date(r.repair_date).toLocaleDateString('th-TH'),
+        'วันที่เสร็จสิ้น': r.repair_finish ? new Date(r.repair_finish).toLocaleDateString('th-TH') : '-',
+        'ชื่อผู้แจ้ง': r.requester_name,
+        'แผนก': r.requester_dept,
+        'อุปกรณ์': r.item?.manual_brand || '-',
+        'เลขครุภัณฑ์': r.item?.assets_number || '-',
+        'อาการเสีย': r.item?.problem_detail || '-',
+        'สถานะ': REPAIR_STATUS.find(s => s.value === r.status)?.label.split(' ')[1] || r.status,
+        'ค่าอะไหล่ (บาท)': r.total_parts_cost || 0,
+        'ค่าบริการ (บาท)': r.service_price || 0,
+        'ยอดรวมสุทธิ (บาท)': r.grand_total || 0,
+        'ช่างผู้ซ่อม': r.technician_name || '-'
+      }))
+
+      // 2. เตรียมข้อมูลสำหรับ Sheet สรุปยอด
+      const summaryData = [
+        { 'หัวข้อ': 'เดือน/ปี', 'ข้อมูล': `${new Date(0, selectedMonth - 1).toLocaleString('th-TH', { month: 'long' })} ${selectedYear + 543}` },
+        { 'หัวข้อ': 'จำนวนงานซ่อมทั้งหมด', 'ข้อมูล': `${summary.count} รายการ` },
+        { 'หัวข้อ': 'รวมค่าอะไหล่', 'ข้อมูล': summary.parts.toLocaleString(undefined, { minimumFractionDigits: 2 }) },
+        { 'หัวข้อ': 'จำนวนอะไหล่ที่ใช้รวม', 'ข้อมูล': `${summary.partsQty} ชิ้น` },
+        { 'หัวข้อ': 'รวมค่าบริการ', 'ข้อมูล': summary.service.toLocaleString(undefined, { minimumFractionDigits: 2 }) },
+        { 'หัวข้อ': 'งบประมาณรวมทั้งสิ้น', 'ข้อมูล': summary.total.toLocaleString(undefined, { minimumFractionDigits: 2 }) }
+      ]
+
+      // 3. สร้าง Workbook และเพิ่ม Sheets
+      const wb = XLSX.utils.book_new()
+      const wsDetails = XLSX.utils.json_to_sheet(detailedData)
+      const wsSummary = XLSX.utils.json_to_sheet(summaryData)
+
+      XLSX.utils.book_append_sheet(wb, wsSummary, "สรุปยอดรายเดือน")
+      XLSX.utils.book_append_sheet(wb, wsDetails, "รายละเอียดงานซ่อม")
+
+      // 4. บันทึกไฟล์
+      const fileName = `รายงานการซ่อม_${selectedMonth}_${selectedYear + 543}.xlsx`
+      XLSX.writeFile(wb, fileName)
+
+      Swal.fire({ icon: 'success', title: 'ส่งออกไฟล์สำเร็จ', text: fileName, timer: 2000, showConfirmButton: false })
+    } catch (err) {
+      console.error(err)
+      Swal.fire({ icon: 'error', title: 'ส่งออกล้มเหลว', text: 'เกิดข้อผิดพลาดในการสร้างไฟล์ Excel' })
+    }
+  }
+
   return (
     <div className="p-6">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
         <div>
           <h3 className="text-lg font-bold text-slate-900">Repair Management System</h3>
           <p className="text-xs text-slate-400">พบรายการแจ้งซ่อมทั้งหมด {filteredRepairs.length} รายการ</p>
+        </div>
+      </div>
+
+      {/* 📊 Monthly Dashboard Section */}
+      <div className="bg-white border border-slate-200 rounded-2xl p-6 mb-8 shadow-sm">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-blue-600 rounded-lg text-white">📈</div>
+            <div>
+              <h4 className="font-bold text-slate-800">สรุปยอดการซ่อมรายเดือน</h4>
+              <p className="text-[10px] text-slate-400 uppercase tracking-wider">Financial & Repair Analytics</p>
+            </div>
+          </div>
+          
+          <div className="flex flex-wrap items-center gap-2">
+            <button 
+              onClick={exportToExcel}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-md shadow-emerald-100 flex items-center gap-2"
+            >
+              <span>📊</span> Export to Excel
+            </button>
+            <div className="h-8 w-px bg-slate-200 mx-2 hidden md:block"></div>
+            <select 
+              value={selectedMonth} 
+              onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
+              className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 outline-none focus:border-blue-500"
+            >
+              {Array.from({ length: 12 }, (_, i) => (
+                <option key={i + 1} value={i + 1}>
+                  {new Date(0, i).toLocaleString('th-TH', { month: 'long' })}
+                </option>
+              ))}
+            </select>
+            <select 
+              value={selectedYear} 
+              onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+              className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 outline-none focus:border-blue-500"
+            >
+              {[2024, 2025, 2026, 2027].map(y => (
+                <option key={y} value={y}>{y + 543}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-slate-50 border border-slate-100 p-4 rounded-2xl">
+            <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">จำนวนงานซ่อม</p>
+            <p className="text-2xl font-black text-slate-800">{summary.count} <span className="text-sm font-medium text-slate-400">รายการ</span></p>
+          </div>
+          <div className="bg-slate-50 border border-slate-100 p-4 rounded-2xl">
+            <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">ค่าอะไหล่รวม</p>
+            <p className="text-2xl font-black text-emerald-600">฿{summary.parts.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+          </div>
+          <div className="bg-slate-50 border border-slate-100 p-4 rounded-2xl">
+            <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">จำนวนอะไหล่รวม</p>
+            <p className="text-2xl font-black text-amber-600">{summary.partsQty} <span className="text-sm font-medium text-slate-400">ชิ้น</span></p>
+          </div>
+          <div className="bg-slate-50 border border-slate-100 p-4 rounded-2xl">
+            <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">ค่าบริการรวม</p>
+            <p className="text-2xl font-black text-blue-600">฿{summary.service.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+          </div>
+          <div className="bg-blue-600 p-4 rounded-2xl shadow-lg shadow-blue-100 col-span-1 sm:col-span-2 lg:col-span-1">
+            <p className="text-[10px] font-bold text-blue-100 uppercase mb-1">งบประมาณรวมทั้งสิ้น</p>
+            <p className="text-2xl font-black text-white">฿{summary.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+          </div>
+        </div>
+
+        {/* 📋 จำแนกตามประเภท (Unit Breakdown) */}
+        <div className="mt-6 pt-6 border-t border-slate-100">
+          <p className="text-[10px] font-bold text-slate-400 uppercase mb-3 tracking-widest">จำแนกตามประเภทอุปกรณ์ (ยอดรวมรายเดือน)</p>
+          <div className="flex flex-wrap gap-2">
+            {Object.entries(summary.countsByType).map(([type, count]: [string, any]) => (
+              <div key={type} className="bg-white border border-slate-200 px-3 py-1.5 rounded-xl flex items-center gap-2 shadow-sm">
+                <span className="text-xs font-bold text-slate-700">{type}</span>
+                <span className="h-4 w-px bg-slate-200"></span>
+                <span className="text-xs font-black text-blue-600">{count} <span className="text-[10px] font-medium text-slate-400">เครื่อง</span></span>
+              </div>
+            ))}
+            {Object.keys(summary.countsByType).length === 0 && (
+              <p className="text-xs text-slate-400 italic">ไม่มีข้อมูลการซ่อมในเดือนนี้</p>
+            )}
+          </div>
         </div>
       </div>
 
@@ -178,7 +336,7 @@ export default function RepairTable() {
             value={searchTerm}
             onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
             placeholder="ค้นหาด้วย ชื่อ, รหัสพนักงาน, ครุภัณฑ์, สัญญา, อุปกรณ์..."
-            className="w-full bg-slate-50 border border-slate-200 hover:border-slate-300 focus:border-blue-500 rounded-xl pl-9 pr-4 py-2 text-sm focus:outline-none text-slate-800"
+            className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-4 py-2 text-sm focus:outline-none text-slate-800"
           />
         </div>
       </div>
@@ -197,6 +355,9 @@ export default function RepairTable() {
               <th className="p-4">อุปกรณ์ / S/N</th>
               <th className="p-4">อาการเสีย</th>
               <th className="p-4 text-center">สถานะ</th>
+              <th className="p-4 text-right">ยอดรวม (บาท)</th>
+              <th className="p-4 text-center">เอกสาร</th>
+              <th className="p-4 text-center">จัดการ</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 text-sm">
@@ -239,11 +400,57 @@ export default function RepairTable() {
                       {REPAIR_STATUS.find(s => s.value === repair.status)?.label.split(' ')[1] || repair.status}
                     </span>
                   </td>
+                  <td className="p-4 text-right font-mono font-bold text-blue-600">
+                    {repair.grand_total ? repair.grand_total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}
+                  </td>
+                  <td className="p-4 text-center">
+                    {repair.file_url ? (
+                      <div className="flex flex-col items-center gap-1">
+                        <a
+                          href={repair.file_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="bg-emerald-50 text-emerald-600 hover:bg-emerald-100 px-2 py-1 rounded text-[10px] font-bold border border-emerald-200 w-full"
+                        >
+                          👁️ ดูไฟล์
+                        </a>
+                        <div className="scale-90 opacity-70 hover:opacity-100 transition-opacity">
+                          <RepairDocumentUploader repairId={repair.id} onUploadSuccess={fetchRepairs} />
+                        </div>
+                      </div>
+                    ) : (
+                      <RepairDocumentUploader repairId={repair.id} onUploadSuccess={fetchRepairs} />
+                    )}
+                  </td>
+                  <td className="p-4 text-center">
+                    <div className="flex items-center justify-center gap-2">
+                      <button
+                        onClick={() => generateRepairPDF(repair)}
+                        className="bg-slate-50 text-slate-600 hover:bg-slate-100 px-2 py-1 rounded text-[10px] font-bold border border-slate-200 whitespace-nowrap"
+                      >
+                        🖨️ พิมพ์ใบซ่อม
+                      </button>
+                      <button
+                        onClick={() => openModal(repair)}
+                        className="bg-blue-50 text-blue-600 hover:bg-blue-100 px-2 py-1 rounded text-[10px] font-bold border border-blue-200"
+                        title="แก้ไขข้อมูล"
+                      >
+                        📝
+                      </button>
+                      <button
+                        onClick={() => handleDelete(repair.id)}
+                        className="bg-red-50 text-red-600 hover:bg-red-100 px-2 py-1 rounded text-[10px] font-bold border border-red-200"
+                        title="ลบรายการ"
+                      >
+                        🗑️
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan={10} className="p-8 text-center text-slate-400">❌ ไม่พบข้อมูลการซ่อม</td>
+                <td colSpan={13} className="p-8 text-center text-slate-400">❌ ไม่พบข้อมูลการซ่อม</td>
               </tr>
             )}
           </tbody>

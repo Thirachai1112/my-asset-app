@@ -23,6 +23,7 @@ export default function RepairManageTable() {
   const [status, setStatus] = useState('Pending')
   const [technicianName, setTechnicianName] = useState('')
   const [fixDetail, setFixDetail] = useState('')
+  const [servicePrice, setServicePrice] = useState<number>(0)
   
   // Spare Parts Usage State: [{ part_id, quantity }]
   const [partsUsage, setPartsUsage] = useState<any[]>([])
@@ -60,6 +61,7 @@ export default function RepairManageTable() {
     setStatus(repair.status || 'Pending')
     setTechnicianName(repair.technician_name || '')
     setFixDetail(repair.fix_detail || '')
+    setServicePrice(repair.service_price || 0)
     setPartsUsage([]) // รีเซ็ตรายการอะไหล่ทุกครั้งที่เปิดใหม่
     setIsModalOpen(true)
   }
@@ -86,10 +88,22 @@ export default function RepairManageTable() {
     // กรองเอาเฉพาะแถวที่เลือกอะไหล่จริงๆ
     const validPartsUsage = partsUsage.filter(p => p.part_id !== '')
 
+    // 🚩 Validation: ถ้ามีการเบิกอะไหล่ ต้องเปลี่ยนสถานะเป็น 'Completed' เท่านั้น
+    if (validPartsUsage.length > 0 && status !== 'Completed') {
+      Swal.fire({
+        icon: 'warning',
+        title: 'ไม่สามารถบันทึกได้',
+        text: 'หากมีการเบิกใช้อะไหล่ กรุณาเปลี่ยนสถานะงานเป็น "เสร็จสิ้น" เพื่อตัดสต็อกและปิดงานครับ',
+        confirmButtonColor: '#3b82f6'
+      })
+      return
+    }
+
     const bodyData = {
       status,
       technician_name: technicianName,
       fix_detail: fixDetail,
+      service_price: servicePrice,
       parts_usage: validPartsUsage,
       repair_item_id: editingRepair?.item?.id || null
     }
@@ -196,7 +210,7 @@ export default function RepairManageTable() {
               {/* ข้อมูลเบื้องต้น */}
               <div className="bg-blue-50 border border-blue-100 p-4 rounded-2xl text-xs space-y-1">
                  <p className="font-bold text-blue-800 mb-2">📌 รายละเอียดเบื้องต้น:</p>
-                 <p className="text-blue-700"><b>อุปกรณ์:</b> {editingRepair?.item?.manual_brand} (Asset: {editingRepair?.item?.assets_number})</p>
+                 <p className="text-blue-700"><b>อุปกรณ์:</b> {editingRepair?.item?.manual_brand} </p>
                  <p className="text-blue-700"><b>อาการ:</b> {editingRepair?.item?.problem_detail}</p>
               </div>
 
@@ -259,15 +273,30 @@ export default function RepairManageTable() {
 
               {/* รายละเอียดการแก้ไข */}
               <div className="border-t border-slate-100 pt-5">
-                <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5">รายละเอียดการแก้ไข</label>
-                <textarea
-                  value={fixDetail}
-                  onChange={(e) => setFixDetail(e.target.value)}
-                  placeholder="ช่างทำการแก้ไขอย่างไรบ้าง..."
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:border-blue-500 outline-none"
-                  rows={3}
-                  required
-                />
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5">รายละเอียดการแก้ไข</label>
+                    <textarea
+                      value={fixDetail}
+                      onChange={(e) => setFixDetail(e.target.value)}
+                      placeholder="ช่างทำการแก้ไขอย่างไรบ้าง..."
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:border-blue-500 outline-none"
+                      rows={3}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5">ค่าบริการ / ค่าดำเนินการ (บาท)</label>
+                    <input 
+                      type="number" 
+                      value={servicePrice} 
+                      onChange={(e) => setServicePrice(parseFloat(e.target.value) || 0)} 
+                      placeholder="0.00" 
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm focus:border-blue-500 outline-none" 
+                    />
+                    <p className="text-[10px] text-slate-400 mt-2 italic">* ไม่รวมค่าอะไหล่ที่เบิกใช้</p>
+                  </div>
+                </div>
               </div>
 
               <div className="flex gap-3 pt-4 border-t border-slate-100 sticky bottom-0 bg-white shrink-0">

@@ -112,24 +112,43 @@ export default function BorrowTable() {
 
       const publicUrl = urlData.publicUrl
 
-      // 🌟 5. บันทึกประวัติแยกเข้าตาราง 'documents' โดยระบุ ID ที่ล็อกเป้าชัวร์ๆ
-      const { error: dbError } = await supabase
+      // 🌟 5. บันทึกข้อมูลแบบ Upsert (เช็กว่ามีเอกสารเดิมของรายการยืมนี้ไหม)
+      const { data: existingDoc } = await supabase
         .from("documents")
-        .insert([
-          {
-            doc_number: `DOC-${borrowId}-${Date.now().toString().slice(-4)}`,
-            doc_type: "ใบขอยืมอุปกรณ์อนุมัติแล้ว",
-            file_url: publicUrl,
-            borrow_id: borrowId // 🔗 ล็อกเข้า ID ตัวจริงของแถวนี้
-          }
-        ])
+        .select("id")
+        .eq("borrow_id", borrowId)
+        .maybeSingle()
 
-      if (dbError) throw dbError
+      let dbResult;
+      if (existingDoc) {
+        // ถ้ามีอยู่แล้วให้ Update
+        dbResult = await supabase
+          .from("documents")
+          .update({
+            file_url: publicUrl,
+            doc_number: `DOC-${borrowId}-${Date.now().toString().slice(-4)}`
+          })
+          .eq("id", existingDoc.id)
+      } else {
+        // ถ้ายังไม่มีให้ Insert
+        dbResult = await supabase
+          .from("documents")
+          .insert([
+            {
+              doc_number: `DOC-${borrowId}-${Date.now().toString().slice(-4)}`,
+              doc_type: "ใบขอยืมอุปกรณ์อนุมัติแล้ว",
+              file_url: publicUrl,
+              borrow_id: borrowId
+            }
+          ])
+      }
+
+      if (dbResult.error) throw dbResult.error
 
       Swal.fire({
         icon: "success",
-        title: "อัปโหลดเอกสารสำเร็จ!",
-        text: `ผูกเข้ากับรายการ ID: ${borrowId} เรียบร้อยแล้ว`,
+        title: existingDoc ? "แก้ไขเอกสารสำเร็จ!" : "อัปโหลดเอกสารสำเร็จ!",
+        text: `อัปเดตข้อมูลสำหรับรายการ ID: ${borrowId} เรียบร้อยแล้ว`,
         timer: 1500,
         showConfirmButton: false,
       })
@@ -319,32 +338,33 @@ export default function BorrowTable() {
                         </button>
                       )}
 
-                      {/* ปุ่มดูไฟล์ หรือ แนบไฟล์ */}
-                      {(() => {
-                        const fileUrl = borrow.file_url;
-                        if (fileUrl) {
-                          return (
-                            <a
-                              href={fileUrl}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="px-2.5 py-1 bg-emerald-600 text-white hover:bg-emerald-700 border border-emerald-600 rounded-lg text-xs font-semibold transition-colors"
-                            >
-                              👁️ ดูไฟล์
-                            </a>
-                          );
-                        }
-                        return (
-                          <label className="cursor-pointer px-2.5 py-1 bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200 rounded-lg text-xs font-semibold">
-                            📁 แนบ
-                            <input
-                              type="file"
-                              className="hidden"
-                              onChange={(e) => handleAdminUpload(e, borrow)}
-                            />
-                          </label>
-                        );
-                      })()} {/* <--- เช็กว่ามีวงเล็บปิดแบบนี้ครบไหม */}
+                      {/* ปุ่มดูไฟล์ หรือ แนบ/แก้ไขไฟล์ */}
+                      <div className="flex flex-col items-center gap-1">
+                        {borrow.file_url && (
+                          <a
+                            href={borrow.file_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="px-2 py-1 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 border border-emerald-200 rounded-lg text-[10px] font-bold transition-colors w-full text-center"
+                          >
+                            👁️ ดูไฟล์
+                          </a>
+                        )}
+                        <label className={`cursor-pointer px-2 py-1 rounded-lg text-[10px] font-bold border transition-all w-full text-center
+                          ${borrow.file_url 
+                            ? 'bg-slate-50 text-slate-400 border-slate-100 opacity-60 hover:opacity-100' 
+                            : 'bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100'
+                          } ${uploadingId === borrow.id ? 'cursor-wait opacity-50' : ''}`}
+                        >
+                          {uploadingId === borrow.id ? '⌛...' : (borrow.file_url ? '🔄 แก้ไข' : '📁 แนบไฟล์')}
+                          <input
+                            type="file"
+                            className="hidden"
+                            disabled={uploadingId !== null}
+                            onChange={(e) => handleAdminUpload(e, borrow)}
+                          />
+                        </label>
+                      </div>
 
                     </div>
                   </td>

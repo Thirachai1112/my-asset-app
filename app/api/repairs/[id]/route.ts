@@ -15,6 +15,7 @@ export async function PATCH(
       status, 
       technician_name, 
       fix_detail, 
+      service_price,
       repair_item_id,
       parts_usage // 💡 รายการอะไหล่ที่ใช้: [{ part_id, quantity }]
     } = body
@@ -29,7 +30,8 @@ export async function PATCH(
     const repairUpdates: any = {
       status,
       technician_name,
-      fix_detail
+      fix_detail,
+      service_price
     }
 
     if (status === 'Completed') {
@@ -46,29 +48,38 @@ export async function PATCH(
     // 2. จัดการเรื่องอะไหล่ (ถ้ามีการส่งมา)
     if (parts_usage && Array.isArray(parts_usage)) {
       for (const item of parts_usage) {
-        // บันทึกการใช้งานอะไหล่
-        const { error: usageError } = await supabase
-          .from('repair_parts_usage')
-          .insert([{
-            repair_id: repairId,
-            part_id: item.part_id,
-            quantity_used: item.quantity
-          }])
-        
-        if (usageError) throw usageError
-
-        // ตัดสต็อกอะไหล่ (ใช้ rpc หรือ update แบบคำนวณ)
-        // เพื่อความง่ายในที่นี้จะดึงมาก่อนแล้วหัก (ในระบบจริงควรใช้ rpc เพื่อความแม่นยำ)
+        // ดึงข้อมูลราคาและสต็อกปัจจุบัน
         const { data: partData } = await supabase
           .from('spare_parts')
-          .select('stock_quantity')
+          .select('stock_quantity, unit_price')
           .eq('id', item.part_id)
           .single()
 
         if (partData) {
+          const quantityUsed = item.quantity
+          const unitPrice = partData.unit_price || 0
+          const priceExclVat = unitPrice * quantityUsed
+          const vatPercent = 7.00
+          const totalPrice = priceExclVat * (1 + vatPercent / 100)
+
+          // บันทึกการใช้งานอะไหล่พร้อมรายละเอียดราคา
+          const { error: usageError } = await supabase
+            .from('repair_parts_usage')
+            .insert([{
+              repair_id: repairId,
+              part_id: item.part_id,
+              quantity_used: quantityUsed,
+              price_excl_vat: priceExclVat,
+              vat_percent: vatPercent,
+              total_price: totalPrice
+            }])
+          
+          if (usageError) throw usageError
+
+          // ตัดสต็อกอะไหล่
           await supabase
             .from('spare_parts')
-            .update({ stock_quantity: partData.stock_quantity - item.quantity })
+            .update({ stock_quantity: partData.stock_quantity - quantityUsed })
             .eq('id', item.part_id)
         }
       }

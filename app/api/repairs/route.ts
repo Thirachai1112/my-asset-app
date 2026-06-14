@@ -21,11 +21,36 @@ export async function GET() {
       return NextResponse.json({ success: false, error: error.message }, { status: 500 })
     }
 
-    // แปรรูปข้อมูลให้แบน (Flatten)
-    const formattedData = repairs.map((r: any) => ({
-      ...r,
-      item: r.repair_items?.[0] || null
-    }))
+    // 2. ดึงข้อมูลเอกสารที่เกี่ยวข้อง
+    const { data: documents } = await supabase
+      .from('documents')
+      .select('*')
+      .not('repair_id', 'is', null)
+
+    // 3. ดึงข้อมูลค่าใช้จ่ายอะไหล่
+    const { data: partCosts } = await supabase
+      .from('repair_parts_usage')
+      .select('repair_id, total_price, quantity_used')
+
+    // แปรรูปข้อมูลให้แบน (Flatten) และแนบเอกสารพร้อมคำนวณราคา
+    const formattedData = repairs.map((r: any) => {
+      const repairDocs = documents?.filter((doc: any) => Number(doc.repair_id) === Number(r.id)) || []
+      
+      // คำนวณยอดรวมอะไหล่และจำนวน
+      const repairParts = partCosts?.filter((p: any) => Number(p.repair_id) === Number(r.id)) || []
+      const totalPartsCost = repairParts.reduce((sum: number, p: any) => sum + (Number(p.total_price) || 0), 0)
+      const totalPartsQty = repairParts.reduce((sum: number, p: any) => sum + (Number(p.quantity_used) || 0), 0)
+
+      return {
+        ...r,
+        item: r.repair_items?.[0] || null,
+        documents: repairDocs,
+        file_url: repairDocs.length > 0 ? repairDocs[0].file_url : null,
+        total_parts_cost: totalPartsCost,
+        total_parts_qty: totalPartsQty,
+        grand_total: totalPartsCost + (Number(r.service_price) || 0)
+      }
+    })
 
     return NextResponse.json({ success: true, data: formattedData })
   } catch (err) {
