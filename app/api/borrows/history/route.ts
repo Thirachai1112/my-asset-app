@@ -10,7 +10,7 @@ export async function GET() {
       .from('borrows')
       .select(`
         *,
-        assets ( id, name, brand, serial_number, type )
+        assets ( id, name, brand, serial_number, type, asset_code, contract_number )
       `)
       .order('id', { ascending: false })
 

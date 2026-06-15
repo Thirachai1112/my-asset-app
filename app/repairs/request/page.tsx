@@ -62,7 +62,7 @@ export default function NewRepairPage() {
           timer: 2000,
           showConfirmButton: false
         }).then(() => {
-          router.push('/repairs')
+          router.push('/')
         })
       } else {
         Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: json.error || 'ไม่สามารถบันทึกข้อมูลได้' })
@@ -187,7 +187,7 @@ export default function NewRepairPage() {
         {/* Footer Note */}
         <p className="mt-8 text-center text-slate-400 text-xs leading-relaxed">
           หากพบปัญหาในการใช้งานระบบ กรุณาติดต่อแผนกไอที <br />
-          หรือโทรสายด่วน 02-xxx-xxxx ต่อ xxx
+          หรือโทรสายด่วน 064-9265-374 ต่อ 10366
         </p>
 
       </div>

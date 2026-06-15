@@ -210,10 +210,13 @@ export default function BorrowTable() {
     return (
       borrow.borrower_name?.toLowerCase().includes(searchLower) ||
       borrow.borrower_dept?.toLowerCase().includes(searchLower) ||
+      borrow.position?.toLowerCase().includes(searchLower) ||
       (borrow.phone || '').includes(searchLower) ||
       statusText.includes(searchLower) ||
       (borrow.assets?.name?.toLowerCase() || '').includes(searchLower) ||
-      (borrow.assets?.serial_number?.toLowerCase() || '').includes(searchLower)
+      (borrow.assets?.serial_number?.toLowerCase() || '').includes(searchLower) ||
+      (borrow.assets?.asset_code?.toLowerCase() || '').includes(searchLower) ||
+      (borrow.assets?.contract_number?.toLowerCase() || '').includes(searchLower)
     )
   })
 
@@ -229,189 +232,226 @@ export default function BorrowTable() {
     }
   }
 
-  if (loading) return <div className="p-12 text-center text-slate-400 animate-pulse">กำลังโหลดประวัติการยืม...</div>
-
   return (
-    <div className="p-4 md:p-6 w-full max-w-full mx-auto">
+    <div className="w-full">
       
-      {/* 🚨 แผงแจ้งเตือนรายการที่ต้องตามงาน */}
+      {/* 🚨 Urgent Alerts */}
       {urgentItems.length > 0 && (
-        <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-6 rounded-r-xl shadow-sm animate-pulse">
-          <h4 className="text-red-700 font-bold text-sm">🔔 ต้องติดตามคืนด่วน ({urgentItems.length} รายการ)</h4>
-          <div className="text-xs text-red-600 mt-2 space-y-1">
-            {urgentItems.map((item) => (
-              <p key={item.id}>• <strong>{item.borrower_name}</strong> ยืม {item.assets?.name} (กำหนด: {new Date(item.due_date).toLocaleDateString('th-TH')})</p>
-            ))}
+        <div className="mx-6 mt-6 bg-red-50/50 border border-red-100 p-4 rounded-2xl flex items-start gap-4 animate-in fade-in slide-in-from-top-4 duration-500">
+          <div className="w-10 h-10 bg-red-100 text-red-600 rounded-xl flex items-center justify-center text-xl shrink-0">
+            🔔
+          </div>
+          <div>
+            <h4 className="text-red-900 font-bold text-sm">รายการที่ต้องติดตามคืนด่วน ({urgentItems.length} รายการ)</h4>
+            <div className="text-xs text-red-700/80 mt-1.5 space-y-1">
+              {urgentItems.slice(0, 2).map((item) => (
+                <p key={item.id}>• <span className="font-semibold text-red-800">{item.borrower_name}</span> ยืม {item.assets?.name} (กำหนดคืน: {new Date(item.due_date).toLocaleDateString('th-TH')})</p>
+              ))}
+              {urgentItems.length > 2 && <p className="italic font-medium text-red-600">...และอีก {urgentItems.length - 2} รายการที่เหลือ</p>}
+            </div>
           </div>
         </div>
       )}
 
-      {/* ส่วนหัวแผงควบคุม */}
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
+      {/* Control Panel */}
+      <div className="p-6 pb-0 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h3 className="text-lg font-bold text-slate-900">บันทึกประวัติการยืม-คืนครุภัณฑ์</h3>
-          <p className="text-xs text-slate-400">พบประวัติการทำรายการทั้งหมด {filteredBorrows.length} รายการ</p>
+          <h3 className="text-xl font-bold text-slate-900">ประวัติการยืม-คืน</h3>
+          <p className="text-sm text-slate-500">พบทั้งหมด {filteredBorrows.length} รายการ</p>
         </div>
-      </div>
-
-      {/* แถบค้นหา */}
-      <div className="mb-6">
-        <div className="relative max-w-md w-full">
-          <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">🔍</span>
+        
+        <div className="relative group max-w-sm w-full">
+          <div className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none">
+            <span className="text-slate-400 group-focus-within:text-blue-500 transition-colors">🔍</span>
+          </div>
           <input
             type="text"
             value={searchTerm}
             onChange={handleSearchChange}
-            placeholder="ค้นหาด้วย ชื่อ, แผนก, เบอร์โทร หรือพิมพ์ 'กำลังยืม'..."
-            className="w-full bg-slate-50 border border-slate-200 hover:border-slate-300 focus:border-blue-500 rounded-xl pl-9 pr-4 py-2 text-sm focus:outline-none text-slate-800"
+            placeholder="ค้นหาชื่อ, แผนก, อุปกรณ์..."
+            className="w-full bg-slate-50 border border-slate-200 text-slate-900 text-sm rounded-xl focus:ring-2 focus:ring-blue-100 focus:border-blue-500 block pl-10 p-2.5 transition-all outline-none"
           />
         </div>
       </div>
 
-      {/* โครงสร้างตารางหลัก */}
-      <div className="w-full overflow-x-auto border border-slate-100 rounded-xl bg-white shadow-sm">
-        <table className="w-full min-w-[100px] text-left border-collapse table-fixed">
-          <thead>
-            <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 text-xs uppercase font-bold tracking-wider">
-              {[
-                { text: "ลำดับ", className: "p-3 w-16 text-center" },
-                { text: "ชื่อผู้ยืม", className: "p-3 w-44" },
-                { text: "แผนก", className: "p-3 w-32" },
-                { text: "อุปกรณ์ที่ยืม", className: "p-3 w-56" },
-                { text: "จำนวน", className: "p-3 w-24 text-center" },
-                { text: "ประเภท", className: "p-3 w-32" },
-                { text: "Serial Number", className: "p-3 w-40" },
-                { text: "วันที่ยืม", className: "p-3 w-28" },
-                { text: "กำหนดคืน", className: "p-3 w-28" },
-                { text: "เบอร์ติดต่อ", className: "p-3 w-32 text-center" },
-                { text: "สถานะการคืน", className: "p-3 w-32 text-center" },
-                { text: "จัดการ", className: "p-3 w-56 text-center" }
-              ].map((header, i) => (
-                <th key={i} className={header.className}>{header.text}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100 text-xs sm:text-sm">
-            {currentRows.length > 0 ? (
-              currentRows.map((borrow, index) => {
-                const isUrgent = !borrow.return_date && borrow.due_date && 
-                  (new Date(borrow.due_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24) <= 2;
+      {/* Table Container */}
+      <div className="p-6">
+        <div className="overflow-x-auto rounded-2xl border border-slate-100 shadow-sm">
+          <table className="w-full text-left border-collapse min-w-[1000px]">
+            <thead>
+              <tr className="bg-slate-50/50 text-slate-500 text-[11px] uppercase font-bold tracking-widest border-b border-slate-100">
+                <th className="px-4 py-4 text-center w-16">#</th>
+                <th className="px-4 py-4">ข้อมูลผู้ยืม</th>
+                <th className="px-4 py-4">อุปกรณ์</th>
+                <th className="px-4 py-4 text-center">จำนวน</th>
+                <th className="px-4 py-4">วันที่ทำรายการ</th>
+                <th className="px-4 py-4 text-center">สถานะ</th>
+                <th className="px-4 py-4 text-center">การจัดการ</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {currentRows.length > 0 ? (
+                currentRows.map((borrow, index) => {
+                  const isUrgent = !borrow.return_date && borrow.due_date && 
+                    (new Date(borrow.due_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24) <= 2;
 
-                return (
-                  <tr key={borrow.id} className={`hover:bg-slate-50/50 transition-colors ${isUrgent ? 'bg-red-50' : ''}`}>
-                    <td className="p-3 text-center text-slate-400 font-mono text-xs">
-                      {indexOfFirstItem + index + 1}
-                    </td>
-                  <td className="p-3 font-semibold text-slate-900 break-words">{borrow.borrower_name}</td>
-                  <td className="p-3 text-slate-600 break-words">{borrow.borrower_dept || '-'}</td>
-                  <td className="p-3 font-medium text-slate-800 break-words">{borrow.assets?.name || 'ไม่พบข้อมูลอุปกรณ์'}</td>
-
-                  <td className="p-3 text-center">
-                    <span className="inline-flex items-center px-2.5 py-0.5 bg-blue-50 text-blue-700 rounded-md font-bold text-xs border border-blue-100 whitespace-nowrap">
-                      {borrow.quantity || 1} ชิ้น
-                    </span>
-                  </td>
-
-                  <td className="p-3 text-slate-500 font-mono text-xs truncate">{borrow.assets?.type || '-'}</td>
-                  <td className="p-3 text-slate-500 font-mono text-xs truncate">{borrow.assets?.serial_number || '-'}</td>
-                  <td className="p-3 text-slate-500 text-xs whitespace-nowrap">{new Date(borrow.borrow_date).toLocaleDateString('th-TH')}</td>
-                  <td className="p-3 text-slate-500 text-xs whitespace-nowrap">{borrow.due_date ? new Date(borrow.due_date).toLocaleDateString('th-TH') : '-'}</td>
-                  <td className="p-3 text-center text-slate-700 font-mono text-xs font-medium truncate">{borrow.phone || '-'}</td>
-                  <td className="p-3 text-center">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border whitespace-nowrap ${borrow.return_date ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'
-                      }`}>
-                      {borrow.return_date ? '● คืนแล้ว' : '● กำลังยืมอยู่'}
-                    </span>
-                  </td>
-
-                  {/* ปุ่มควบคุมการทำงาน */}
-                  <td className="p-3 text-center">
-                    <div className="flex items-center justify-center gap-2">
-
-                      {/* ปุ่มคืนของ: แสดงเฉพาะเมื่อยังไม่มี return_date */}
-                      {!borrow.return_date && (
-                        <button
-                          onClick={() => handleReturn(borrow.id, borrow.assets?.id)}
-                          className="px-2.5 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 rounded-lg text-xs font-semibold transition-colors"
-                        >
-                          ↩️ คืนของ
-                        </button>
-                      )}
-
-                      {/* ปุ่มดูไฟล์ หรือ แนบ/แก้ไขไฟล์ */}
-                      <div className="flex flex-col items-center gap-1">
-                        {borrow.file_url && (
-                          <a
-                            href={borrow.file_url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="px-2 py-1 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 border border-emerald-200 rounded-lg text-[10px] font-bold transition-colors w-full text-center"
-                          >
-                            👁️ ดูไฟล์
-                          </a>
-                        )}
-                        <label className={`cursor-pointer px-2 py-1 rounded-lg text-[10px] font-bold border transition-all w-full text-center
-                          ${borrow.file_url 
-                            ? 'bg-slate-50 text-slate-400 border-slate-100 opacity-60 hover:opacity-100' 
-                            : 'bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100'
-                          } ${uploadingId === borrow.id ? 'cursor-wait opacity-50' : ''}`}
-                        >
-                          {uploadingId === borrow.id ? '⌛...' : (borrow.file_url ? '🔄 แก้ไข' : '📁 แนบไฟล์')}
-                          <input
-                            type="file"
-                            className="hidden"
-                            disabled={uploadingId !== null}
-                            onChange={(e) => handleAdminUpload(e, borrow)}
-                          />
-                        </label>
-                      </div>
-
+                  return (
+                    <tr key={borrow.id} className={`group hover:bg-slate-50/80 transition-all ${isUrgent ? 'bg-red-50/30' : ''}`}>
+                      <td className="px-4 py-5 text-center text-slate-400 font-mono text-xs">
+                        {(indexOfFirstItem + index + 1).toString().padStart(2, '0')}
+                      </td>
+                      <td className="px-4 py-5">
+                        <div className="flex flex-col">
+                          <span className="font-bold text-slate-900 leading-tight">{borrow.borrower_name}</span>
+                          <div className="flex flex-col gap-0.5 mt-1">
+                            <span className="text-[11px] text-slate-600 font-medium">ตำแหน่ง: {borrow.position || '-'}</span>
+                            <span className="text-[11px] text-slate-500">แผนก: {borrow.borrower_dept || '-'}</span>
+                          </div>
+                          <span className="text-[10px] text-blue-500 font-bold mt-1.5 inline-flex items-center gap-1">
+                            📞 {borrow.phone || '-'}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-5">
+                        <div className="flex flex-col max-w-[220px]">
+                          <span className="font-semibold text-slate-800 truncate" title={borrow.assets?.name}>
+                            {borrow.assets?.name || 'ไม่พบข้อมูล'}
+                          </span>
+                          <div className="flex flex-col gap-0.5 mt-1.5">
+                            <span className="text-[10px] text-slate-500 font-mono">
+                              asset NO: <span className="text-blue-600 font-bold">{borrow.assets?.asset_code || '-'}</span>
+                            </span>
+                            <span className="text-[10px] text-slate-500 font-mono">
+                              SN: <span className="text-slate-700">{borrow.assets?.serial_number || '-'}</span>
+                            </span>
+                            <span className="text-[10px] text-slate-400">
+                              Contract: {borrow.assets?.contract_number || '-'}
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-5 text-center">
+                        <span className="px-2 py-1 bg-slate-100 text-slate-600 rounded-lg text-xs font-bold border border-slate-200">
+                          {borrow.quantity || 1}
+                        </span>
+                      </td>
+                      <td className="px-4 py-5">
+                        <div className="flex flex-col text-[11px]">
+                          <div className="flex items-center gap-1.5 text-slate-600">
+                            <span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
+                            ยืม: {new Date(borrow.borrow_date).toLocaleDateString('th-TH')}
+                          </div>
+                          <div className={`flex items-center gap-1.5 mt-1.5 ${isUrgent ? 'text-red-500 font-bold' : 'text-slate-400'}`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${isUrgent ? 'bg-red-500 animate-ping' : 'bg-slate-300'}`}></span>
+                            คืน: {borrow.due_date ? new Date(borrow.due_date).toLocaleDateString('th-TH') : '-'}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-5 text-center">
+                        <div className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wide uppercase border ${
+                          borrow.return_date 
+                            ? 'bg-emerald-50 text-emerald-600 border-emerald-100' 
+                            : 'bg-amber-50 text-amber-600 border-amber-100'
+                        }`}>
+                          <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${borrow.return_date ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'}`}></span>
+                          {borrow.return_date ? 'Returned' : 'In Use'}
+                        </div>
+                      </td>
+                      <td className="px-4 py-5 text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          {!borrow.return_date && (
+                            <button
+                              onClick={() => handleReturn(borrow.id, borrow.assets?.id)}
+                              className="p-2 bg-white text-blue-600 hover:bg-blue-600 hover:text-white border border-blue-200 rounded-xl transition-all shadow-sm"
+                              title="ยืนยันการคืน"
+                            >
+                              ↩️
+                            </button>
+                          )}
+                          
+                          <div className="flex flex-col gap-1">
+                            {borrow.file_url && (
+                              <a
+                                href={borrow.file_url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="px-3 py-1 bg-white text-emerald-600 hover:bg-emerald-50 border border-emerald-200 rounded-lg text-[10px] font-bold transition-all shadow-sm text-center"
+                              >
+                                View Doc
+                              </a>
+                            )}
+                            <label className={`cursor-pointer px-3 py-1 rounded-lg text-[10px] font-bold border transition-all shadow-sm text-center
+                              ${borrow.file_url 
+                                ? 'bg-slate-50 text-slate-400 border-slate-100 hover:bg-white hover:text-slate-600' 
+                                : 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700'
+                              } ${uploadingId === borrow.id ? 'cursor-wait opacity-50' : ''}`}
+                            >
+                              {uploadingId === borrow.id ? '...' : (borrow.file_url ? 'Edit' : 'Upload')}
+                              <input
+                                type="file"
+                                className="hidden"
+                                disabled={uploadingId !== null}
+                                onChange={(e) => handleAdminUpload(e, borrow)}
+                              />
+                            </label>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan={7} className="px-4 py-20 text-center">
+                    <div className="flex flex-col items-center">
+                      <span className="text-4xl mb-4 opacity-20">📂</span>
+                      <p className="text-slate-400 font-medium">ไม่พบประวัติการทำรายการ</p>
                     </div>
                   </td>
                 </tr>
-                );
-              })
-            ) : (
-              <tr>
-                <td colSpan={12} className="p-8 text-center text-slate-400">❌ ไม่พบประวัติการยืมที่ตรงกับเงื่อนไข</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {/* ระบบแบ่งหน้า (Pagination Controls) */}
-      {totalPages > 1 && (
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4 py-3 px-4 bg-white border border-slate-100 rounded-xl text-xs sm:text-sm shadow-sm">
-          <div className="text-slate-500 text-center sm:text-left">
-            แสดงรายการที่ <span className="font-semibold text-slate-700">{indexOfFirstItem + 1}</span> ถึง{" "}
-            <span className="font-semibold text-slate-700">
-              {Math.min(indexOfLastItem, filteredBorrows.length)}
-            </span>{" "}
-            จากทั้งหมด <span className="font-semibold text-slate-700">{filteredBorrows.length}</span> รายการ
-          </div>
-
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => goToPage(currentPage - 1)}
-              disabled={currentPage === 1}
-              className="px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 disabled:opacity-40 disabled:hover:bg-white font-medium transition-all select-none"
-            >
-              ◀ ก่อนหน้า
-            </button>
-            <span className="text-slate-700 font-semibold bg-slate-100 px-3 py-1.5 rounded-lg">
-              หน้า {currentPage} / {totalPages}
-            </span>
-            <button
-              onClick={() => goToPage(currentPage + 1)}
-              disabled={currentPage === totalPages}
-              className="px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 disabled:opacity-40 disabled:hover:bg-white font-medium transition-all select-none"
-            >
-              ถัดไป ▶
-            </button>
-          </div>
+              )}
+            </tbody>
+          </table>
         </div>
-      )}
+
+        {/* Improved Pagination */}
+        {totalPages > 1 && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-8">
+            <p className="text-xs text-slate-500 font-medium">
+              แสดง <span className="text-slate-900">{indexOfFirstItem + 1}</span> ถึง <span className="text-slate-900">{Math.min(indexOfLastItem, filteredBorrows.length)}</span> จาก <span className="text-slate-900">{filteredBorrows.length}</span> รายการ
+            </p>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => goToPage(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="p-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 disabled:opacity-30 transition-all"
+              >
+                ◀
+              </button>
+              {[...Array(totalPages)].map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => goToPage(i + 1)}
+                  className={`w-9 h-9 rounded-xl text-xs font-bold transition-all ${
+                    currentPage === i + 1
+                      ? 'bg-blue-600 text-white shadow-lg shadow-blue-200'
+                      : 'bg-white text-slate-500 hover:bg-slate-50 border border-slate-200'
+                  }`}
+                >
+                  {i + 1}
+                </button>
+              ))}
+              <button
+                onClick={() => goToPage(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className="p-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 disabled:opacity-30 transition-all"
+              >
+                ▶
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
