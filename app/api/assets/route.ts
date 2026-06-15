@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '../../../utils/supabase/server'
+import { logAdminActivity } from '../../../utils/admin-logger'
 
 // 1. GET: ดึงรายการครุภัณฑ์ทั้งหมด
+// ... (GET remains unchanged)
 export async function GET() {
   try {
     console.log('[GET /api/assets] Starting request...')
@@ -29,6 +31,7 @@ export async function GET() {
 // 2. POST: เพิ่มครุภัณฑ์ชิ้นใหม่
 export async function POST(request: Request) {
   const supabase = await createClient()
+  const adminIdHeader = request.headers.get('x-admin-id')
 
   try {
     const body = await request.json()
@@ -55,6 +58,11 @@ export async function POST(request: Request) {
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    // 📝 บันทึก Log การสร้าง
+    if (adminIdHeader) {
+      await logAdminActivity(supabase, parseInt(adminIdHeader), 'CREATE_ASSET', 'assets', data[0].id)
     }
 
     return NextResponse.json({ success: true, data: data[0] }, { status: 201 })

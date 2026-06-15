@@ -91,9 +91,21 @@ export default function AssetTable() {
 
     if (!result.isConfirmed) return
 
+    const adminId = (() => {
+      const profile = localStorage.getItem('user_profile')
+      if (profile) {
+        const parsed = JSON.parse(profile)
+        return parsed.id ? String(parsed.id) : null
+      }
+      return null
+    })()
+
     try {
       const res = await fetch(`/api/assets/${assetId}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: {
+          'x-admin-id': adminId || ''
+        }
       })
       const json = await res.json()
 
@@ -171,18 +183,33 @@ export default function AssetTable() {
       ? { name, brand, type, asset_code: finalAssetCode, serial_number: finalSerialNumber, contract_number: finalContractNumber }
       : { name, brand, type, asset_code: finalAssetCode, serial_number: finalSerialNumber, contract_number: finalContractNumber, status }
 
+    const adminId = (() => {
+      const profile = localStorage.getItem('user_profile')
+      if (profile) {
+        const parsed = JSON.parse(profile)
+        return parsed.id ? String(parsed.id) : null
+      }
+      return null
+    })()
+
     try {
       let res
       if (editingAsset) {
         res = await fetch(`/api/assets/${editingAsset.id}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'x-admin-id': adminId || ''
+          },
           body: JSON.stringify(bodyData),
         })
       } else {
         res = await fetch('/api/assets', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'x-admin-id': adminId || ''
+          },
           body: JSON.stringify(bodyData),
         })
       }

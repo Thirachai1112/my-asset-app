@@ -62,7 +62,7 @@ export default function NewRepairPage() {
           timer: 2000,
           showConfirmButton: false
         }).then(() => {
-          router.push('/')
+          router.push('/') // ไปหน้ารายการแจ้งซ่อม
         })
       } else {
         Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: json.error || 'ไม่สามารถบันทึกข้อมูลได้' })
