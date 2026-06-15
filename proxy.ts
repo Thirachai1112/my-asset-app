@@ -4,7 +4,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 /**
  * Middleware สำหรับจัดการ Session และการเข้าถึงหน้าต่างๆ
  */
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   let response = NextResponse.next({
     request: {
       headers: request.headers,
