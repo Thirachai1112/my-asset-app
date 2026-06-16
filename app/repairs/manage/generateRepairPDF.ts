@@ -26,6 +26,27 @@ interface RepairData {
     }>;
 }
 
+const loadFont = async (doc: jsPDF, fontName: string) => {
+    try {
+        const response = await fetch("/api/font");
+        if (!response.ok) throw new Error("ดึงฟอนต์ผ่าน API ล้มเหลว");
+        const data = await response.json();
+        doc.addFileToVFS("THSarabunNew.ttf", data.font);
+        doc.addFont("THSarabunNew.ttf", fontName, "normal");
+        doc.setFont(fontName);
+        return true;
+    } catch (err) {
+        console.error("ระบบฟอนต์ขัดข้อง:", err);
+        return false;
+    }
+};
+
+const drawOuterBorder = (doc: jsPDF) => {
+    doc.setDrawColor(0, 0, 0);
+    doc.setLineWidth(0.4);
+    doc.rect(15, 15, 180, 267);
+};
+
 export const generateRepairPDF = async (repair: RepairData) => {
     const doc = new jsPDF({
         orientation: "p",
@@ -34,28 +55,12 @@ export const generateRepairPDF = async (repair: RepairData) => {
     });
 
     const fontName = "THSarabunNew";
-
-    const drawOuterBorder = () => {
-        doc.setDrawColor(0, 0, 0);
-        doc.setLineWidth(0.4);
-        doc.rect(15, 15, 180, 267);
-    };
-
-    // 🔤 ระบบโหลดฟอนต์
-    try {
-        const response = await fetch("/api/font");
-        if (!response.ok) throw new Error("ดึงฟอนต์ผ่าน API ล้มเหลว");
-        const data = await response.json();
-        doc.addFileToVFS("THSarabunNew.ttf", data.font);
-        doc.addFont("THSarabunNew.ttf", fontName, "normal");
-        doc.setFont(fontName);
-    } catch (err) {
-        console.error("ระบบฟอนต์ขัดข้อง:", err);
+    if (!await loadFont(doc, fontName)) {
         alert("ไม่สามารถโหลดฟอนต์ภาษาไทยได้");
         return;
     }
 
-    drawOuterBorder();
+    drawOuterBorder(doc);
 
     // 1. ส่วนหัวเอกสาร
     doc.setFontSize(22);

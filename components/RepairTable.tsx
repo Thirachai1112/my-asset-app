@@ -5,6 +5,7 @@ import Link from 'next/link'
 import Swal from 'sweetalert2'
 import * as XLSX from 'xlsx'
 import { generateRepairPDF } from '@/app/repairs/manage/generateRepairPDF'
+import { generateRepairPDFquick } from '@/app/repairs/manage/generateRepairPDFquick'
 import RepairDocumentUploader from './RepairDocumentUploader'
 
 const REPAIR_STATUS = [
@@ -200,6 +201,7 @@ export default function RepairTable() {
         'อุปกรณ์': r.item?.manual_brand || '-',
         'เลขครุภัณฑ์': r.item?.assets_number || '-',
         'อาการเสีย': r.item?.problem_detail || '-',
+        'วิธีการซ่อม': r.fix_detail || '-',
         'สถานะ': REPAIR_STATUS.find(s => s.value === r.status)?.label.split(' ')[1] || r.status,
         'ค่าอะไหล่ (บาท)': r.total_parts_cost || 0,
         'ค่าบริการ (บาท)': r.service_price || 0,
@@ -354,6 +356,7 @@ export default function RepairTable() {
               <th className="p-4">ประเภท</th>
               <th className="p-4">อุปกรณ์ / S/N</th>
               <th className="p-4">อาการเสีย</th>
+              <th className="p-4 text-center">วิธีการซ่อม</th>
               <th className="p-4 text-center">สถานะ</th>
               <th className="p-4 text-right">ยอดรวม (บาท)</th>
               <th className="p-4 text-center">เอกสาร</th>
@@ -364,46 +367,47 @@ export default function RepairTable() {
             {currentRepairs.length > 0 ? (
               currentRepairs.map((repair, index) => (
                 <tr key={repair.id} className="hover:bg-slate-50/50 transition-colors">
-                  <td className="p-4 text-center text-slate-400 font-mono text-xs">{indexOfFirstItem + index + 1}</td>
-                  <td className="p-4">
+                  <td className="p-4 text-center text-slate-400 font-mono text-xs align-top">{indexOfFirstItem + index + 1}</td>
+                  <td className="p-4 align-top">
                     <div className="text-xs text-slate-500">📥 {new Date(repair.repair_date).toLocaleDateString('th-TH')}</div>
                     {repair.repair_finish && (
                       <div className="text-xs text-emerald-600 font-bold mt-1">✅ {new Date(repair.repair_finish).toLocaleDateString('th-TH')}</div>
                     )}
                   </td>
-                  <td className="p-4 font-mono text-xs text-slate-600 font-bold uppercase">
+                  <td className="p-4 font-mono text-xs text-slate-600 font-bold uppercase align-top">
                     {repair.requester_emp_code || '-'}
                   </td>
-                  <td className="p-4">
+                  <td className="p-4 align-top">
                     <div className="font-semibold text-slate-900">{repair.requester_name || 'ไม่ระบุชื่อ'}</div>
                     <div className="text-[10px] text-slate-500">{repair.requester_position || '-'} | {repair.requester_dept || '-'}</div>
                     <div className="text-[10px] text-blue-600 font-mono">{repair.requester_phone || '-'}</div>
                   </td>
-                  <td className="p-4 font-mono text-xs text-amber-700 font-bold">
+                  <td className="p-4 font-mono text-xs text-amber-700 font-bold align-top">
                     {repair.item?.assets_number || '-'}
                   </td>
-                  <td className="p-4 font-mono text-xs text-blue-700 font-bold">
+                  <td className="p-4 font-mono text-xs text-blue-700 font-bold align-top">
                     {repair.item?.manual_contract || '-'}
                   </td>
-                  <td className="p-4 text-xs font-semibold text-slate-600 uppercase">
+                  <td className="p-4 text-xs font-semibold text-slate-600 uppercase align-top">
                     {repair.item?.type_item || '-'}
                   </td>
-                  <td className="p-4">
+                  <td className="p-4 align-top">
                     <div className="font-medium text-slate-800">{repair.item?.manual_brand || 'ไม่ระบุ'}</div>
                     <div className="text-[10px] text-slate-500 font-mono">SN: {repair.item?.manual_sn || '-'}</div>
                   </td>
-                  <td className="p-4 text-slate-700 max-w-xs truncate">{repair.item?.problem_detail || '-'}</td>
-                  <td className="p-4 text-center">
+                  <td className="p-4 text-slate-700 min-w-[150px] max-w-xs whitespace-normal break-words align-top">{repair.item?.problem_detail || '-'}</td>
+                  <td className="p-4 text-slate-700 min-w-[150px] max-w-xs whitespace-normal break-words align-top">{repair.fix_detail || '-'}</td>
+                  <td className="p-4 text-center align-top">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border whitespace-nowrap ${
                       REPAIR_STATUS.find(s => s.value === repair.status)?.color || 'bg-slate-50 text-slate-700'
                     }`}>
                       {REPAIR_STATUS.find(s => s.value === repair.status)?.label.split(' ')[1] || repair.status}
                     </span>
                   </td>
-                  <td className="p-4 text-right font-mono font-bold text-blue-600">
+                  <td className="p-4 text-right font-mono font-bold text-blue-600 align-top">
                     {repair.grand_total ? repair.grand_total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}
                   </td>
-                  <td className="p-4 text-center">
+                  <td className="p-4 text-center align-top">
                     {repair.file_url ? (
                       <div className="flex flex-col items-center gap-1">
                         <a
@@ -422,28 +426,40 @@ export default function RepairTable() {
                       <RepairDocumentUploader repairId={repair.id} onUploadSuccess={fetchRepairs} />
                     )}
                   </td>
-                  <td className="p-4 text-center">
-                    <div className="flex items-center justify-center gap-2">
-                      <button
-                        onClick={() => generateRepairPDF(repair)}
-                        className="bg-slate-50 text-slate-600 hover:bg-slate-100 px-2 py-1 rounded text-[10px] font-bold border border-slate-200 whitespace-nowrap"
-                      >
-                        🖨️ พิมพ์ใบซ่อม
-                      </button>
-                      <button
-                        onClick={() => openModal(repair)}
-                        className="bg-blue-50 text-blue-600 hover:bg-blue-100 px-2 py-1 rounded text-[10px] font-bold border border-blue-200"
-                        title="แก้ไขข้อมูล"
-                      >
-                        📝
-                      </button>
-                      <button
-                        onClick={() => handleDelete(repair.id)}
-                        className="bg-red-50 text-red-600 hover:bg-red-100 px-2 py-1 rounded text-[10px] font-bold border border-red-200"
-                        title="ลบรายการ"
-                      >
-                        🗑️
-                      </button>
+                  <td className="p-4 text-center align-top">
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="flex flex-col gap-1 w-full min-w-[100px]">
+                        <button
+                          onClick={() => generateRepairPDF(repair)}
+                          className="bg-slate-50 text-slate-600 hover:bg-slate-100 px-2 py-1.5 rounded text-[10px] font-bold border border-slate-200 whitespace-nowrap w-full"
+                        >
+                          🖨️ พิมพ์ใบซ่อม
+                        </button>
+
+                        <button
+                          onClick={() => generateRepairPDFquick(repair)}
+                          className="bg-slate-50 text-slate-600 hover:bg-slate-100 px-2 py-1.5 rounded text-[10px] font-bold border border-slate-200 whitespace-nowrap w-full"
+                        >
+                          🖨️ พิมพ์ใบซ่อมด่วน
+                        </button>
+                      </div>
+
+                      <div className="flex items-center justify-center gap-2">
+                        <button
+                          onClick={() => openModal(repair)}
+                          className="bg-blue-50 text-blue-600 hover:bg-blue-100 px-2 py-1.5 rounded text-[10px] font-bold border border-blue-200"
+                          title="แก้ไขข้อมูล"
+                        >
+                          📝
+                        </button>
+                        <button
+                          onClick={() => handleDelete(repair.id)}
+                          className="bg-red-50 text-red-600 hover:bg-red-100 px-2 py-1.5 rounded text-[10px] font-bold border border-red-200"
+                          title="ลบรายการ"
+                        >
+                          🗑️
+                        </button>
+                      </div>
                     </div>
                   </td>
                 </tr>
