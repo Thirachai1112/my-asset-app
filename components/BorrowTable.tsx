@@ -226,6 +226,11 @@ export default function BorrowTable() {
   const indexOfFirstItem = indexOfLastItem - itemsPerPage
   const currentRows = filteredBorrows.slice(indexOfFirstItem, indexOfLastItem)
 
+  // 🧮 คำนวณยอดรวมจำนวนชิ้นจริง (Sum of quantities)
+  const totalQuantity = filteredBorrows.reduce((sum, b) => sum + (Number(b.quantity || b.qty || 0)), 0)
+  const activeQuantity = filteredBorrows.filter(b => !b.return_date).reduce((sum, b) => sum + (Number(b.quantity || b.qty || 0)), 0)
+  const urgentQuantity = urgentItems.reduce((sum, b) => sum + (Number(b.quantity || b.qty || 0)), 0)
+
   const goToPage = (pageNumber: number) => {
     if (pageNumber >= 1 && pageNumber <= totalPages) {
       setCurrentPage(pageNumber)
@@ -235,6 +240,36 @@ export default function BorrowTable() {
   return (
     <div className="w-full">
       
+      {/* 📊 Summary Dashboard (เหมือนหน้าซ่อม) */}
+      <div className="mx-6 mt-6 bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-2 bg-indigo-600 rounded-lg text-white">📊</div>
+          <div>
+            <h4 className="font-bold text-slate-800">สรุปภาพรวมการยืม-คืน</h4>
+            <p className="text-[10px] text-slate-400 uppercase tracking-wider">Borrowing & Return Analytics</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-slate-50 border border-slate-100 p-4 rounded-2xl">
+            <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">จำนวนเครื่องที่ยืมอยู่</p>
+            <p className="text-2xl font-black text-indigo-600">{activeQuantity} <span className="text-sm font-medium text-slate-400">ชิ้น</span></p>
+          </div>
+          <div className="bg-slate-50 border border-slate-100 p-4 rounded-2xl">
+            <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">รายการที่เลยกำหนด</p>
+            <p className="text-2xl font-black text-red-500">{urgentItems.length} <span className="text-sm font-medium text-slate-400">รายการ</span></p>
+          </div>
+          <div className="bg-slate-50 border border-slate-100 p-4 rounded-2xl">
+            <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">รวมจำนวนชิ้นทั้งหมด</p>
+            <p className="text-2xl font-black text-slate-800">{totalQuantity} <span className="text-sm font-medium text-slate-400">ชิ้น</span></p>
+          </div>
+          <div className="bg-slate-50 border border-slate-100 p-4 rounded-2xl">
+            <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">ประวัติรายการทั้งหมด</p>
+            <p className="text-2xl font-black text-slate-800">{filteredBorrows.length} <span className="text-sm font-medium text-slate-400">รายการ</span></p>
+          </div>
+        </div>
+      </div>
+
       {/* 🚨 Urgent Alerts */}
       {urgentItems.length > 0 && (
         <div className="mx-6 mt-6 bg-red-50/50 border border-red-100 p-4 rounded-2xl flex items-start gap-4 animate-in fade-in slide-in-from-top-4 duration-500">
@@ -242,10 +277,10 @@ export default function BorrowTable() {
             🔔
           </div>
           <div>
-            <h4 className="text-red-900 font-bold text-sm">รายการที่ต้องติดตามคืนด่วน ({urgentItems.length} รายการ)</h4>
+            <h4 className="text-red-900 font-bold text-sm">รายการที่ต้องติดตามคืนด่วน ({urgentItems.length} รายการ / รวม {urgentQuantity} ชิ้น)</h4>
             <div className="text-xs text-red-700/80 mt-1.5 space-y-1">
               {urgentItems.slice(0, 2).map((item) => (
-                <p key={item.id}>• <span className="font-semibold text-red-800">{item.borrower_name}</span> ยืม {item.assets?.name} (กำหนดคืน: {new Date(item.due_date).toLocaleDateString('th-TH')})</p>
+                <p key={item.id}>• <span className="font-semibold text-red-800">{item.borrower_name}</span> ยืม {item.assets?.name} จำนวน {item.quantity || 1} ชิ้น (กำหนดคืน: {new Date(item.due_date).toLocaleDateString('th-TH')})</p>
               ))}
               {urgentItems.length > 2 && <p className="italic font-medium text-red-600">...และอีก {urgentItems.length - 2} รายการที่เหลือ</p>}
             </div>
@@ -257,7 +292,7 @@ export default function BorrowTable() {
       <div className="p-6 pb-0 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h3 className="text-xl font-bold text-slate-900">ประวัติการยืม-คืน</h3>
-          <p className="text-sm text-slate-500">พบทั้งหมด {filteredBorrows.length} รายการ</p>
+          <p className="text-sm text-slate-500">พบทั้งหมด {filteredBorrows.length} รายการ (รวม {totalQuantity} ชิ้น)</p>
         </div>
         
         <div className="relative group max-w-sm w-full">
