@@ -12,6 +12,11 @@ export async function GET() {
         *,
         repair_items (
           *
+        ),
+        users (
+          id,
+          full_name,
+          Job_position
         )
       `)
       .order('id', { ascending: false })
@@ -48,7 +53,10 @@ export async function GET() {
         file_url: repairDocs.length > 0 ? repairDocs[0].file_url : null,
         total_parts_cost: totalPartsCost,
         total_parts_qty: totalPartsQty,
-        grand_total: totalPartsCost + (Number(r.service_price) || 0)
+        grand_total: totalPartsCost + (Number(r.service_price) || 0),
+        technician_id: r.user_id, // Map user_id to technician_id for frontend/PDF compatibility
+        technician_name_inspect: r.users?.full_name || null,
+        technician_position_inspect: r.users?.Job_position || null
       }
     })
 

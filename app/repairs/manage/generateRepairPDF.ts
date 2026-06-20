@@ -10,7 +10,9 @@ interface RepairData {
     requester_position?: string;
     requester_emp_code?: string;
     status: string;
-    technician_name?: string;
+    technician_id?: string;
+    technician_name_inspect?: string;
+    technician_position_inspect?: string;
     fix_detail?: string;
     item?: {
         manual_brand: string;
@@ -73,27 +75,43 @@ const drawCheckbox = (doc: jsPDF, x: number, y: number, label: string, isChecked
     doc.text(label, x + 5, y + 3);
 };
 
-const drawPEALogo = (doc: jsPDF, x: number, y: number) => {
-    // 💜 วาดตราสัญลักษณ์ กฟภ. (สีม่วง-เหลือง)
-    doc.setFillColor(116, 33, 131); // ม่วง PEA
-    doc.circle(x, y, 9, 'F');
+const loadImageAsBase64 = async (url: string): Promise<string> => {
+    const response = await fetch(url);
+    const blob = await response.blob();
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+    });
+};
 
-    doc.setFillColor(253, 197, 0); // เหลืองทอง PEA
-    doc.circle(x, y, 7, 'F');
+const drawPEALogo = (doc: jsPDF, x: number, y: number, logoBase64: string | null) => {
+    if (logoBase64) {
+        // วาดตราสัญลักษณ์จากรูปภาพจริงที่โหลดมา
+        doc.addImage(logoBase64, "PNG", x - 9, y - 9, 18, 18);
+    } else {
+        // 💜 วาดตราสัญลักษณ์ กฟภ. แบบจำลองด้วยเวกเตอร์ (Fallback)
+        doc.setFillColor(116, 33, 131); // ม่วง PEA
+        doc.circle(x, y, 9, 'F');
 
-    // แผนที่ประเทศไทยจำลองในวงกลม
-    doc.setDrawColor(116, 33, 131);
-    doc.setLineWidth(0.4);
-    doc.line(x - 1, y - 4, x, y - 5);
-    doc.line(x, y - 5, x + 1, y - 4);
-    doc.line(x + 1, y - 4, x + 1.5, y - 2);
-    doc.line(x + 1.5, y - 2, x + 1, y);
-    doc.line(x + 1, y, x + 2, y + 2);
-    doc.line(x + 2, y + 2, x + 0.5, y + 4);
-    doc.line(x + 0.5, y + 4, x - 0.5, y + 4);
-    doc.line(x - 0.5, y + 4, x - 1, y + 1);
-    doc.line(x - 1, y + 1, x - 1.5, y - 1);
-    doc.line(x - 1.5, y - 1, x - 1, y - 4);
+        doc.setFillColor(253, 197, 0); // เหลืองทอง PEA
+        doc.circle(x, y, 7, 'F');
+
+        // แผนที่ประเทศไทยจำลองในวงกลม
+        doc.setDrawColor(116, 33, 131);
+        doc.setLineWidth(0.4);
+        doc.line(x - 1, y - 4, x, y - 5);
+        doc.line(x, y - 5, x + 1, y - 4);
+        doc.line(x + 1, y - 4, x + 1.5, y - 2);
+        doc.line(x + 1.5, y - 2, x + 1, y);
+        doc.line(x + 1, y, x + 2, y + 2);
+        doc.line(x + 2, y + 2, x + 0.5, y + 4);
+        doc.line(x + 0.5, y + 4, x - 0.5, y + 4);
+        doc.line(x - 0.5, y + 4, x - 1, y + 1);
+        doc.line(x - 1, y + 1, x - 1.5, y - 1);
+        doc.line(x - 1.5, y - 1, x - 1, y - 4);
+    }
 
     // ข้อความใต้โลโก้
     doc.setTextColor(116, 33, 131);
@@ -118,8 +136,15 @@ export const generateRepairPDF = async (repair: RepairData) => {
         return;
     }
 
+    let logoBase64: string | null = null;
+    try {
+        logoBase64 = await loadImageAsBase64("/pea-logo.png");
+    } catch (err) {
+        console.error("โหลดโลโก้ กฟภ. ล้มเหลว:", err);
+    }
+
     // 1. ส่วนหัวและตราสัญลักษณ์ กฟภ.
-    drawPEALogo(doc, 32, 20);
+    drawPEALogo(doc, 32, 20, logoBase64);
 
     doc.setFont("THSarabunNew", "normal");
     doc.setFontSize(15);
@@ -150,7 +175,7 @@ export const generateRepairPDF = async (repair: RepairData) => {
     doc.text(formatThaiDate(repair.repair_date), 120, 55);
 
     // 2. เนื้อหารายการอุปกรณ์ที่แจ้งชำรุด
-    doc.text("ขอแจ้งเครื่องชำรุดเพื่อส่งซ่อมตามรายการดังนี้.-", 25, 77);
+    doc.text("ขอแจ้งเครื่องชำรุดเพื่อส่งซ่อมตามรายการดังนี้.-", 35, 77);
 
     // ตรวจจับประเภทของอุปกรณ์เพื่อติ๊กเลือกใน Checkbox
     const type = (repair.item?.type_item || "").toLowerCase();
@@ -161,13 +186,13 @@ export const generateRepairPDF = async (repair: RepairData) => {
     const isOther = !isCPU && !isMonitor && !isPrinter && !isUPS;
 
     // แถวที่ 1 ของ Checkboxes
-    drawCheckbox(doc, 28, 83, "CPU", isCPU);
+    drawCheckbox(doc, 35, 83, "CPU", isCPU);
     drawCheckbox(doc, 68, 83, "Monitor", isMonitor);
     drawCheckbox(doc, 108, 83, "Printer", isPrinter);
     drawCheckbox(doc, 148, 83, "UPS", isUPS);
 
     // แถวที่ 2 และรายละเอียดแบรนด์/รุ่น
-    drawCheckbox(doc, 28, 90, "อื่นๆ", isOther);
+    drawCheckbox(doc, 35, 90, "อื่นๆ", isOther);
     if (isOther && repair.item?.type_item) {
         doc.text(repair.item.type_item, 45, 93);
     } else {
@@ -175,30 +200,30 @@ export const generateRepairPDF = async (repair: RepairData) => {
     }
 
     doc.text("ยี่ห้อ/รุ่น", 110, 93);
-    doc.text(repair.item?.manual_brand || "-", 135, 93);
+    doc.text(repair.item?.manual_brand || "-", 125, 93);
 
     // รหัสทรัพย์สิน และสัญญาเลขที่
-    doc.text("รหัสทรัพย์สิน", 25, 100);
+    doc.text("รหัสทรัพย์สิน", 35, 100);
     doc.text(repair.item?.assets_number || "-", 55, 100);
 
     doc.text("สัญญาเลขที่", 110, 100);
-    doc.text(repair.item?.manual_contract || "-", 135, 100);
+    doc.text(repair.item?.manual_contract || "-", 130, 100);
 
     // รหัสเครื่อง (Serial Number)
-    doc.text("รหัสเครื่อง", 25, 107);
-    doc.text(repair.item?.manual_sn || "-", 55, 107);
+    doc.text("รหัสเครื่อง", 35, 107);
+    doc.text(repair.item?.manual_sn || "-", 53, 107);
 
     // สถานะสัญญาประกัน
     const hasContract = !!repair.item?.manual_contract?.trim();
-    drawCheckbox(doc, 28, 114, "อยู่ในสัญญาประกัน", hasContract);
-    drawCheckbox(doc, 73, 114, "ไม่อยู่ในสัญญาประกัน", !hasContract);
+    drawCheckbox(doc, 35, 114, "อยู่ในสัญญาประกัน", hasContract);
+    drawCheckbox(doc, 68, 114, "ไม่อยู่ในสัญญาประกัน", !hasContract);
 
     // อาการเสีย และตำแหน่งที่ติดตั้ง
-    doc.text("อาการ", 25, 122);
-    doc.text(repair.item?.problem_detail || "-", 55, 122);
+    doc.text("อาการ", 35, 123);
+    doc.text(repair.item?.problem_detail || "-", 49, 123);
 
-    doc.text("ซึ่งติดตั้งใช้งานที่", 25, 129);
-    doc.text(repair.requester_dept || "-", 55, 129);
+    doc.text("ซึ่งติดตั้งใช้งานที่", 35, 129);
+    doc.text(repair.requester_dept || "-", 60, 129);
 
     // 3. กรอบข้อความอนุมัติค่าใช้จ่ายกรณีหมดประกัน
     doc.setDrawColor(0, 0, 0);
@@ -206,7 +231,7 @@ export const generateRepairPDF = async (repair: RepairData) => {
     doc.rect(15, 134, 180, 15);
 
     doc.setFont("THSarabunNew", "bold");
-    doc.text("ในกรณีที่ไม่อยู่ในสัญญาประกัน ขอให้ กตส.ฉ.2 ดำเนินการซ่อม", 105, 139, { align: "center" });
+    doc.text("ในกรณีที่ไม่อยู่ในสัญญาประกัน ขอให้ กดส.ฉ.2 ดำเนินการซ่อม", 105, 139, { align: "center" });
     doc.text("และตัดงบค่าใช้จ่ายจากศูนย์ต้นทุนของ E301023000 รหัสบัญชี 53051060", 105, 145, { align: "center" });
     doc.setFont("THSarabunNew", "normal");
 
@@ -216,56 +241,57 @@ export const generateRepairPDF = async (repair: RepairData) => {
     // 4. ลายมือชื่อผู้แจ้งซ่อม
     const reqY = 166;
     const positionText = repair.requester_position || "-";
-    const empCodeText = repair.requester_emp_code ? `   รหัสพนักงาน   ${repair.requester_emp_code}` : "";
-    
-    doc.text(`ชื่อ-สกุล   ${repair.requester_name}`, 130, reqY);
-    doc.text(`ตำแหน่ง   ${positionText}${empCodeText}`, 120, reqY + 6);
-    doc.text(`เบอร์โทรติดต่อกลับ   ${repair.requester_phone || "-"}`, 120, reqY + 12);
+    const empCodeText = repair.requester_emp_code ? `  รหัสพนักงาน ${repair.requester_emp_code}` : "";
+
+    doc.text(`ชื่อ-สกุล   ${repair.requester_name}`, 145, reqY);
+    doc.text(`ตำแหน่ง    ${positionText}${empCodeText}`, 130, reqY + 6);
+    doc.text(`เบอร์โทรติดต่อกลับ   ${repair.requester_phone || "-"}`, 130, reqY + 12);
 
     // 5. กล่องการตรวจสอบอุปกรณ์ก่อนส่งซ่อม (ผคช.กตส.-บริหาร)
-    const checkY = 186;
+    const checkY = 180;
     doc.rect(15, checkY, 180, 36);
 
     doc.setFont("THSarabunNew", "bold");
-    doc.text("การตรวจสอบอุปกรณ์ก่อนส่งซ่อม ( ผคช.กตส.-บริหาร )", 20, checkY + 7);
+    doc.text("การตรวจสอบอุปกรณ์ก่อนส่งซ่อม ( ผคข.กดส.)", 20, checkY + 7);
     doc.setFont("THSarabunNew", "normal");
-    doc.text("..........................................................................................................................................................", 20, checkY + 15);
+    doc.text("..........................................................................................", 20, checkY + 15);
 
-    doc.text(`ผู้รับเครื่อง/ตรวจสอบ   ${repair.technician_name || "-"}`, 117, checkY + 23);
-    doc.text("ตำแหน่ง   นรค.5", 133, checkY + 29);
-    doc.text("วันที่   ........................................", 137, checkY + 35);
+    doc.text("..................................................", 129, checkY + 20);
+    doc.text(`ผู้รับเครื่อง/ตรวจสอบ   ${repair.technician_name_inspect || repair.technician_id || "-"}`, 117, checkY + 25);
+    doc.text(`ตำแหน่ง   ${repair.technician_position_inspect || "นรค.5"}`, 133, checkY + 30);
+    doc.text("วันที่ ", 137, checkY + 35);
 
     // 6. กล่องสองคอลัมน์ด้านล่าง (การจัดซ่อม/การอนุมัติ)
-    const bottomY = 226;
+    const bottomY = 216;
     const currentThaiYear = new Date().getFullYear() + 543;
 
-    doc.rect(15, bottomY, 180, 56);
-    doc.line(105, bottomY, 105, bottomY + 56); // เส้นแบ่งแนวตั้งกึ่งกลาง
+    doc.rect(15, bottomY, 180, 70);
+    doc.line(105, bottomY, 105, bottomY + 70); // เส้นแบ่งแนวตั้งกึ่งกลาง
 
     // คอลัมน์ซ้าย (สำหรับ หผ. เสนออนุมัติ)
-    doc.text("เรียน อก.ตส.ฉ.2", 20, bottomY + 5);
+    doc.text("เรียน อก.กดส.ฉ.2", 20, bottomY + 5);
     doc.text("ดำเนินการซ่อมโดยวิธี", 20, bottomY + 11);
 
     drawCheckbox(doc, 22, bottomY + 17, "จัดซื้ออุปกรณ์มาเปลี่ยน", false);
     drawCheckbox(doc, 22, bottomY + 23, "ส่งให้บริษัทดำเนินการ", false);
     drawCheckbox(doc, 22, bottomY + 29, "ไม่ดำเนินการซ่อม", false);
 
-    doc.text("เพื่อโปรดพิจารณา อนุมัติ", 25, bottomY + 36);
-    doc.text("(นายสุทธิศักดิ์ สรรพสาร)", 35, bottomY + 44);
-    doc.text("ตำแหน่ง หผ. ผคช.กตส.-บริหาร", 30, bottomY + 50);
-    doc.text("วันที่   ........................................", 30, bottomY + 55);
+    doc.text("เพื่อโปรดพิจารณา อนุมัติ", 29, bottomY + 39);
+    doc.text("(นายสุทธิศักดิ์ สรรพสาร)", 45, bottomY + 55);
+    doc.text("ตำแหน่ง หผ.ผคข.กดส.", 46, bottomY + 60);
+    doc.text("วันที่  ", 41, bottomY + 67);
 
     // คอลัมน์ขวา (สำหรับการอนุมัติผล)
-    doc.text(`ที่ ฉ.2กตส.(คช.)........./${currentThaiYear}`, 110, bottomY + 5);
+    doc.text(`ที่ ฉ.2กดส.(คข.)........./${currentThaiYear}`, 110, bottomY + 5);
 
     doc.setFont("THSarabunNew", "bold");
     doc.text("อนุมัติ", 150, bottomY + 20, { align: "center" });
     doc.setFont("THSarabunNew", "normal");
 
-    doc.text("(........................................................)", 115, bottomY + 36);
-    doc.text("ตำแหน่ง   ....................................................", 115, bottomY + 44);
-    doc.text("วันที่   ........................................", 115, bottomY + 50);
+    doc.text("(.........................................................................)", 120, bottomY + 40);
+    doc.text("ตำแหน่ง   ", 110, bottomY + 47);
+    doc.text("วันที่  ", 120, bottomY + 55);
 
     // บันทึกไฟล์เอกสาร PDF
-    doc.save(`ใบซ่อมทำเสนอ_RE-${repair.id}_${repair.requester_name}.pdf`);
+    doc.save(`ใบซ่อมทำเสนอ-${repair.id}_${repair.requester_name}.pdf`);
 };
