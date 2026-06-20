@@ -10,11 +10,12 @@ export async function PATCH(
     const resolvedParams = await params
     const id = resolvedParams.id
     const body = await request.json()
-    
-    const { 
-      status, 
-      technician_name, 
-      fix_detail, 
+
+    const {
+      status,
+      technician_name,
+      technician_id,
+      fix_detail,
       service_price,
       repair_item_id,
       parts_usage // 💡 รายการอะไหล่ที่ใช้: [{ part_id, quantity }]
@@ -30,6 +31,7 @@ export async function PATCH(
     const repairUpdates: any = {
       status,
       technician_name,
+      user_id: technician_id,
       fix_detail,
       service_price
     }
@@ -73,7 +75,7 @@ export async function PATCH(
               vat_percent: vatPercent,
               total_price: totalPrice
             }])
-          
+
           if (usageError) throw usageError
 
           // ตัดสต็อกอะไหล่

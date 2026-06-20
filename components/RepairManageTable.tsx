@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Swal from 'sweetalert2'
+import { createClient } from '@/utils/supabase/client'
 
 const REPAIR_STATUS = [
   { value: 'Pending', label: '⏳ รอดำเนินการ', color: 'bg-amber-50 text-amber-700 border-amber-200' },
@@ -10,6 +11,7 @@ const REPAIR_STATUS = [
 ]
 
 export default function RepairManageTable() {
+  const supabase = createClient()
   const [repairs, setRepairs] = useState<any[]>([])
   const [parts, setParts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -22,11 +24,14 @@ export default function RepairManageTable() {
   // Form states for Technician
   const [status, setStatus] = useState('Pending')
   const [technicianName, setTechnicianName] = useState('')
+
+  const [technicianId, setTechnicianId] = useState('')
   const [fixDetail, setFixDetail] = useState('')
   const [servicePrice, setServicePrice] = useState<number>(0)
-  
+
   // Spare Parts Usage State: [{ part_id, quantity }]
   const [partsUsage, setPartsUsage] = useState<any[]>([])
+  const [users, setUsers] = useState<any[]>([]) // เพิ่มบรรทัดนี้
 
   const fetchRepairs = async () => {
     setLoading(true)
@@ -41,6 +46,7 @@ export default function RepairManageTable() {
     }
   }
 
+
   const fetchParts = async () => {
     try {
       const res = await fetch('/api/spare-parts')
@@ -51,15 +57,32 @@ export default function RepairManageTable() {
     }
   }
 
+  const fetchUsers = async () => {
+    try {
+      // ใช้ supabase ที่คุณประกาศไว้ผ่าน createClient()
+      const { data, error } = await supabase
+        .from('users') // ตัวนี้คือ Supabase Client
+        .select('id, full_name, Job_position')
+        .order('full_name')
+
+      if (error) throw error
+      if (data) setUsers(data)
+    } catch (err) {
+      console.error('Error fetching users:', err)
+    }
+  }
+
   useEffect(() => {
     fetchRepairs()
     fetchParts()
+    fetchUsers()
   }, [])
 
   const openManageModal = (repair: any) => {
     setEditingRepair(repair)
     setStatus(repair.status || 'Pending')
     setTechnicianName(repair.technician_name || '')
+    setTechnicianId(repair.technician_id || '')
     setFixDetail(repair.fix_detail || '')
     setServicePrice(repair.service_price || 0)
     setPartsUsage([]) // รีเซ็ตรายการอะไหล่ทุกครั้งที่เปิดใหม่
@@ -84,7 +107,7 @@ export default function RepairManageTable() {
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     // กรองเอาเฉพาะแถวที่เลือกอะไหล่จริงๆ
     const validPartsUsage = partsUsage.filter(p => p.part_id !== '')
 
@@ -102,6 +125,7 @@ export default function RepairManageTable() {
     const bodyData = {
       status,
       technician_name: technicianName,
+      technician_id: technicianId,
       fix_detail: fixDetail,
       service_price: servicePrice,
       parts_usage: validPartsUsage,
@@ -205,13 +229,13 @@ export default function RepairManageTable() {
               <h4 className="font-bold flex items-center gap-2"><span>🛠️</span> บันทึกการดำเนินการซ่อม</h4>
               <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-white text-2xl">×</button>
             </div>
-            
+
             <form onSubmit={handleUpdate} className="p-6 space-y-6 overflow-y-auto">
               {/* ข้อมูลเบื้องต้น */}
               <div className="bg-blue-50 border border-blue-100 p-4 rounded-2xl text-xs space-y-1">
-                 <p className="font-bold text-blue-800 mb-2">📌 รายละเอียดเบื้องต้น:</p>
-                 <p className="text-blue-700"><b>อุปกรณ์:</b> {editingRepair?.item?.manual_brand} </p>
-                 <p className="text-blue-700"><b>อาการ:</b> {editingRepair?.item?.problem_detail}</p>
+                <p className="font-bold text-blue-800 mb-2">📌 รายละเอียดเบื้องต้น:</p>
+                <p className="text-blue-700"><b>อุปกรณ์:</b> {editingRepair?.item?.manual_brand} </p>
+                <p className="text-blue-700"><b>อาการ:</b> {editingRepair?.item?.problem_detail}</p>
               </div>
 
               {/* ส่วนจัดการสถานะ */}
@@ -226,7 +250,27 @@ export default function RepairManageTable() {
                   <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5">ช่างผู้รับผิดชอบ</label>
                   <input type="text" value={technicianName} onChange={(e) => setTechnicianName(e.target.value)} placeholder="ระบุชื่อช่าง" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm focus:border-blue-500 outline-none" required />
                 </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5">
+                    พนักงานผู้ตรวจสอบ
+                  </label>
+                  <select
+                    value={technicianId}
+                    onChange={(e) => setTechnicianId(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm focus:border-blue-500 outline-none"
+                    required
+                  >
+                    <option value="">-- เลือกชื่อพนักงานผู้ตรวจสอบ --</option>
+                    {users.map((user) => (
+                      <option key={user.id} value={user.id}>
+                        {user.full_name} ({user.Job_position})
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
+
 
               {/* ส่วนของอะไหล่ */}
               <div className="border-t border-slate-100 pt-5">
@@ -238,7 +282,7 @@ export default function RepairManageTable() {
                     + เพิ่มอะไหล่
                   </button>
                 </div>
-                
+
                 {partsUsage.length > 0 ? (
                   <div className="space-y-3">
                     {partsUsage.map((usage, idx) => (
@@ -287,12 +331,12 @@ export default function RepairManageTable() {
                   </div>
                   <div>
                     <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5">ค่าบริการ / ค่าดำเนินการ (บาท)</label>
-                    <input 
-                      type="number" 
-                      value={servicePrice} 
-                      onChange={(e) => setServicePrice(parseFloat(e.target.value) || 0)} 
-                      placeholder="0.00" 
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm focus:border-blue-500 outline-none" 
+                    <input
+                      type="number"
+                      value={servicePrice}
+                      onChange={(e) => setServicePrice(parseFloat(e.target.value) || 0)}
+                      placeholder="0.00"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm focus:border-blue-500 outline-none"
                     />
                     <p className="text-[10px] text-slate-400 mt-2 italic">* ไม่รวมค่าอะไหล่ที่เบิกใช้</p>
                   </div>
@@ -310,3 +354,4 @@ export default function RepairManageTable() {
     </div>
   )
 }
+

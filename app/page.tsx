@@ -38,12 +38,12 @@ export default function DashboardPortal() {
     try {
       // 1. ตรวจสอบข้อมูลจาก localStorage (ระบบล็อคอินใหม่)
       const storedProfile = localStorage.getItem('user_profile')
-      
+
       if (storedProfile) {
         const parsedProfile = JSON.parse(storedProfile)
         setProfile(parsedProfile)
         setUser({ email: `${parsedProfile.emp_code}@pea.co.th` }) // จำลอง user object เพื่อให้ UI ทำงานต่อได้
-        
+
         // 2. ถ้าเป็น Admin ให้ดึงข้อมูลสถิติ
         if (parsedProfile.role === 'admin') {
           fetchDashboardData()
@@ -60,7 +60,7 @@ export default function DashboardPortal() {
             .select('*')
             .eq('emp_code', user.email?.split('@')[0])
             .single()
-          
+
           setProfile(dbProfile || { role: 'user' })
           if (dbProfile?.role === 'admin') {
             fetchDashboardData()
@@ -196,12 +196,13 @@ export default function DashboardPortal() {
           Asset Management Portal
         </h1>
         <p className="text-slate-400 max-w-lg mb-10 leading-relaxed text-lg">
-          ระบบบริหารจัดการครุภัณฑ์และงานแจ้งซ่อมแบบครบวงจร <br/> 
+          ระบบบริหารจัดการครุภัณฑ์และงานแจ้งซ่อมแบบครบวงจร <br />
           กรุณาเข้าสู่ระบบเพื่อดำเนินการขอยืมอุปกรณ์ หรือแจ้งซ่อม
         </p>
         <div className="flex flex-col sm:flex-row gap-4 w-full max-w-md">
           <Link href="/login" className="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 px-8 rounded-2xl shadow-lg shadow-blue-500/20 transition-all text-lg">
-            เข้าสู่ระบบ (Login)
+            เข้าสู่ระบบ-จัดการ
+            (Login-Admin)
           </Link>
           <Link href="/repairs/request" className="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-bold py-4 px-8 rounded-2xl transition-all text-lg">
             แจ้งซ่อม (Guest)
@@ -218,9 +219,9 @@ export default function DashboardPortal() {
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div>
             <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent">
-              Admin IT Dashboard
+              Admin  Dashboard
             </h1>
-            <p className="text-slate-400 text-sm mt-1">ยินดีต้อนรับคุณ {user.email} (ผู้ดูแลระบบ)</p>
+
           </div>
           <div className="flex items-center gap-3">
             <button onClick={handleLogout} className="bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 px-4 py-2 rounded-xl text-xs font-bold transition-all">
@@ -305,17 +306,17 @@ export default function DashboardPortal() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <Link href="/borrows/request" className="group p-10 bg-gradient-to-br from-slate-900 to-slate-800 border border-slate-800 rounded-[2.5rem] hover:border-indigo-500/50 transition-all shadow-2xl relative overflow-hidden">
-             <div className="absolute top-0 right-0 p-8 text-6xl opacity-10 group-hover:opacity-20 transition-opacity">🛒</div>
-             <div className="w-14 h-14 bg-indigo-600 text-white rounded-2xl flex items-center justify-center text-2xl mb-6 shadow-lg shadow-indigo-500/20">🤝</div>
-             <h3 className="text-2xl font-bold mb-4">ขอยืมอุปกรณ์คอมพิวเตอร์</h3>
-             <p className="text-slate-400 leading-relaxed">เบิกยืม Notebook, Monitor หรืออุปกรณ์อื่นๆ เพื่อใช้ในการปฏิบัติงาน</p>
+            <div className="absolute top-0 right-0 p-8 text-6xl opacity-10 group-hover:opacity-20 transition-opacity">🛒</div>
+            <div className="w-14 h-14 bg-indigo-600 text-white rounded-2xl flex items-center justify-center text-2xl mb-6 shadow-lg shadow-indigo-500/20">🤝</div>
+            <h3 className="text-2xl font-bold mb-4">ขอยืมอุปกรณ์คอมพิวเตอร์</h3>
+            <p className="text-slate-400 leading-relaxed">เบิกยืม Notebook, Monitor หรืออุปกรณ์อื่นๆ เพื่อใช้ในการปฏิบัติงาน</p>
           </Link>
 
           <Link href="/repairs/request" className="group p-10 bg-gradient-to-br from-slate-900 to-slate-800 border border-slate-800 rounded-[2.5rem] hover:border-emerald-500/50 transition-all shadow-2xl relative overflow-hidden">
-             <div className="absolute top-0 right-0 p-8 text-6xl opacity-10 group-hover:opacity-20 transition-opacity">🔧</div>
-             <div className="w-14 h-14 bg-emerald-600 text-white rounded-2xl flex items-center justify-center text-2xl mb-6 shadow-lg shadow-emerald-500/20">🛠️</div>
-             <h3 className="text-2xl font-bold mb-4">แจ้งซ่อมอุปกรณ์เสีย</h3>
-             <p className="text-slate-400 leading-relaxed">แจ้งอาการเสียของคอมพิวเตอร์หรืออุปกรณ์ต่างๆ เพื่อให้ช่างตรวจสอบแก้ไข</p>
+            <div className="absolute top-0 right-0 p-8 text-6xl opacity-10 group-hover:opacity-20 transition-opacity">🔧</div>
+            <div className="w-14 h-14 bg-emerald-600 text-white rounded-2xl flex items-center justify-center text-2xl mb-6 shadow-lg shadow-emerald-500/20">🛠️</div>
+            <h3 className="text-2xl font-bold mb-4">แจ้งซ่อมอุปกรณ์เสีย</h3>
+            <p className="text-slate-400 leading-relaxed">แจ้งอาการเสียของคอมพิวเตอร์หรืออุปกรณ์ต่างๆ เพื่อให้ช่างตรวจสอบแก้ไข</p>
           </Link>
         </div>
 

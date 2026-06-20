@@ -79,7 +79,7 @@ export default function RepairTable() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     const bodyData = {
       requester_name: requesterName,
       requester_dept: requesterDept,
@@ -257,17 +257,17 @@ export default function RepairTable() {
               <p className="text-[10px] text-slate-400 uppercase tracking-wider">Financial & Repair Analytics</p>
             </div>
           </div>
-          
+
           <div className="flex flex-wrap items-center gap-2">
-            <button 
+            <button
               onClick={exportToExcel}
               className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-md shadow-emerald-100 flex items-center gap-2"
             >
               <span>📊</span> Export to Excel
             </button>
             <div className="h-8 w-px bg-slate-200 mx-2 hidden md:block"></div>
-            <select 
-              value={selectedMonth} 
+            <select
+              value={selectedMonth}
               onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
               className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 outline-none focus:border-blue-500"
             >
@@ -277,8 +277,8 @@ export default function RepairTable() {
                 </option>
               ))}
             </select>
-            <select 
-              value={selectedYear} 
+            <select
+              value={selectedYear}
               onChange={(e) => setSelectedYear(parseInt(e.target.value))}
               className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 outline-none focus:border-blue-500"
             >
@@ -398,9 +398,8 @@ export default function RepairTable() {
                   <td className="p-4 text-slate-700 min-w-[150px] max-w-xs whitespace-normal break-words align-top">{repair.item?.problem_detail || '-'}</td>
                   <td className="p-4 text-slate-700 min-w-[150px] max-w-xs whitespace-normal break-words align-top">{repair.fix_detail || '-'}</td>
                   <td className="p-4 text-center align-top">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border whitespace-nowrap ${
-                      REPAIR_STATUS.find(s => s.value === repair.status)?.color || 'bg-slate-50 text-slate-700'
-                    }`}>
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border whitespace-nowrap ${REPAIR_STATUS.find(s => s.value === repair.status)?.color || 'bg-slate-50 text-slate-700'
+                      }`}>
                       {REPAIR_STATUS.find(s => s.value === repair.status)?.label.split(' ')[1] || repair.status}
                     </span>
                   </td>
@@ -433,7 +432,7 @@ export default function RepairTable() {
                           onClick={() => generateRepairPDF(repair)}
                           className="bg-slate-50 text-slate-600 hover:bg-slate-100 px-2 py-1.5 rounded text-[10px] font-bold border border-slate-200 whitespace-nowrap w-full"
                         >
-                          🖨️ พิมพ์ใบซ่อม
+                          🖨️ พิมพ์ใบซ่อมทำเสนอ
                         </button>
 
                         <button
@@ -490,7 +489,7 @@ export default function RepairTable() {
               <h4 className="font-bold text-slate-900">📝 แก้ไขข้อมูลการซ่อม</h4>
               <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600 text-xl">×</button>
             </div>
-            
+
             <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto">
               <div>
                 <label className="block text-xs font-bold uppercase text-slate-500 mb-1">สถานะการซ่อม</label>

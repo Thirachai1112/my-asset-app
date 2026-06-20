@@ -5,31 +5,8 @@ export async function POST(request: Request) {
   try {
     const { empCode, password } = await request.json()
 
-    // 🚩 [ส่วนที่ 1] จำลองการเช็คกับส่วนกลาง (Mock Central Auth)
-    let isCentralAuthSuccess = false
-    let centralUserData = null
-
-    if ((empCode === "admin" && password === "1234") || (empCode === "user" && password === "1234")) {
-      isCentralAuthSuccess = true
-      centralUserData = {
-        emp_code: empCode,
-        full_name: empCode === "admin" ? "ผู้ดูแลระบบ กฟภ." : "พนักงาน กฟภ.",
-        department: "กองคอมพิวเตอร์"
-      }
-    }
-
-    if (!isCentralAuthSuccess) {
-      return NextResponse.json({ success: false, error: "รหัสพนักงานหรือรหัสผ่านเข้าเครื่องไม่ถูกต้อง" }, { status: 401 })
-    }
-
-    // 🚩 [ส่วนที่ 2] เชื่อมต่อกับตาราง public.users ใน Supabase (ถ้ามี)
-    let finalUser = {
-      id: empCode === 'admin' ? 'admin-id' : 'user-id',
-      emp_code: centralUserData?.emp_code,
-      full_name: centralUserData?.full_name,
-      department: centralUserData?.department,
-      role: empCode === 'admin' ? 'admin' : 'user'
-    }
+    // 🚩 [ส่วนที่ 1] ตรวจสอบข้อมูลผู้ใช้งานและรหัสผ่านจากตาราง users ใน Supabase
+    let finalUser = null
 
     try {
       const supabase = await createClient()
@@ -40,30 +17,48 @@ export async function POST(request: Request) {
         .eq('emp_code', empCode)
         .single()
 
-      if (userData) {
-        finalUser = userData
-      } else {
-        // 🌟 [ส่วนที่ 3] ถ้ายังไม่มีในระบบ ให้ลงทะเบียนอัตโนมัติ
-        const { data: newUser, error: insertError } = await supabase
-          .from('users')
-          .insert([
-            {
-              emp_code: centralUserData?.emp_code,
-              full_name: centralUserData?.full_name,
-              department: centralUserData?.department,
-              role: empCode === 'admin' ? 'admin' : 'user'
-            }
-          ])
-          .select()
-          .single()
-
-        if (!insertError && newUser) {
-          finalUser = newUser
-        }
+      if (fetchError || !userData) {
+        return NextResponse.json({ 
+          success: false, 
+          error: "ไม่พบสิทธิ์การใช้งานของรหัสพนักงานนี้ในระบบ" 
+        }, { status: 403 })
       }
+
+      // 1. ตรวจสอบรหัสผ่าน (เปรียบเทียบค่าตรงๆ ตามข้อมูลในตาราง)
+      if (userData.password_hash !== password) {
+        return NextResponse.json({ 
+          success: false, 
+          error: "รหัสพนักงานหรือรหัสผ่านเข้าเครื่องไม่ถูกต้อง" 
+        }, { status: 401 })
+      }
+
+      // 2. ตรวจสอบสิทธิ์ว่าต้องเป็น admin เท่านั้น
+      if (userData.role !== 'admin') {
+        return NextResponse.json({ 
+          success: false, 
+          error: "ไม่มีสิทธิ์เข้าใช้งานระบบ (สำหรับผู้ดูแลระบบเท่านั้น)" 
+        }, { status: 403 })
+      }
+
+      finalUser = userData
     } catch (dbError) {
-      console.error("Database (Supabase) is not available, using mock user data:", dbError)
-      // ใช้ finalUser (mock) ต่อไป
+      console.error("Database (Supabase) access error:", dbError)
+      
+      // กรณีเชื่อมต่อ Database ไม่ได้ ให้ยอมรับรหัส 'admin' / '1234' (Mock fallback เพื่อความปลอดภัยตอน Test)
+      if (empCode === 'admin' && password === '1234') {
+        finalUser = {
+          id: 'admin-id',
+          emp_code: 'admin',
+          full_name: 'ผู้ดูแลระบบ (Mock Fallback)',
+          department: 'กองคอมพิวเตอร์',
+          role: 'admin'
+        }
+      } else {
+        return NextResponse.json({ 
+          success: false, 
+          error: "เกิดข้อผิดพลาดในการเชื่อมต่อฐานข้อมูล" 
+        }, { status: 500 })
+      }
     }
 
     // ✅ สร้าง Response พร้อมข้อมูล User
