@@ -2,16 +2,19 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import AssetTable from '../../components/AssetTable'
-import BorrowTable from '../../components/BorrowTable'
+import AssetTable from '@/components/AssetTable'
+import BorrowTable from '@/components/BorrowTable'
 
 export default function BorrowsDashboard() {
   const [activeTab, setActiveTab] = useState<'assets' | 'borrows'>('assets')
   const [stats, setStats] = useState({
     totalAssets: 0,
     activeBorrows: 0,
+    activeBorrowsQty: 0,
     returnedToday: 0,
-    overdue: 0
+    
+    overdue: 0,
+    overdueCount: 0
   })
 
   useEffect(() => {
@@ -33,18 +36,32 @@ export default function BorrowsDashboard() {
           const now = new Date()
 
           const active = history.filter((b: any) => !b.return_date)
+          const activeBorrowsQty = active.reduce((sum: number, b: any) => sum + (Number(b.quantity) || 0), 0)
           const returned = history.filter((b: any) => 
             b.return_date && new Date(b.return_date).toLocaleDateString('en-CA') === today
           )
-          const overdue = history.filter((b: any) => 
-            !b.return_date && b.due_date && new Date(b.due_date) < now
-          )
+          // เกินกำหนดคืน = ยังไม่คืน และวันกำหนดคืนผ่านไปแล้ว (เทียบเฉพาะวันที่ ไม่รวมเวลา)
+          const overdue = history.filter((b: any) => {
+            if (!b.return_date && b.due_date) {
+              const due = new Date(b.due_date)
+              // ปรับ due date ให้เป็น 23:59:59 ของวันนั้น เพื่อเทียบกับเวลาปัจจุบัน
+              // หรือใช้วิธีตัดเวลาทิ้งแล้วเทียบเฉพาะวันเดือนปี
+              due.setHours(0, 0, 0, 0)
+              const today = new Date()
+              today.setHours(0, 0, 0, 0)
+              return due < today
+            }
+            return false
+          })
+          const overdueQty = overdue.reduce((sum: number, b: any) => sum + (Number(b.quantity) || 0), 0)
 
           setStats({
             totalAssets: assets.length,
             activeBorrows: active.length,
+            activeBorrowsQty,
             returnedToday: returned.length,
-            overdue: overdue.length
+            overdue: overdueQty,
+            overdueCount: overdue.length
           })
         }
       } catch (err) {
@@ -81,22 +98,29 @@ export default function BorrowsDashboard() {
 
         {/* Stats Overview (Quick Insights) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          {[
-            { label: 'อุปกรณ์ทั้งหมด', value: stats.totalAssets, icon: '📦', color: 'blue' },
-            { label: 'กำลังถูกยืม', value: stats.activeBorrows, icon: '🤝', color: 'amber' },
-            { label: 'คืนแล้ววันนี้', value: stats.returnedToday, icon: '✅', color: 'emerald' },
-            { label: 'เกินกำหนดคืน', value: stats.overdue, icon: '🚨', color: 'red' },
-          ].map((stat, i) => (
-            <div key={i} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-between mb-3">
-                <span className={`w-10 h-10 flex items-center justify-center rounded-xl bg-${stat.color}-50 text-xl`}>
-                  {stat.icon}
-                </span>
-              </div>
-              <h3 className="text-slate-500 text-sm font-medium">{stat.label}</h3>
-              <p className="text-2xl font-bold text-slate-900 mt-1">{stat.value}</p>
+          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between mb-3">
+              <span className="w-10 h-10 flex items-center justify-center rounded-xl bg-blue-50 text-xl">📦</span>
             </div>
-          ))}
+            <h3 className="text-slate-500 text-sm font-medium">อุปกรณ์ทั้งหมด</h3>
+            <p className="text-2xl font-bold text-slate-900 mt-1">{stats.totalAssets}</p>
+          </div>
+          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between mb-3">
+              <span className="w-10 h-10 flex items-center justify-center rounded-xl bg-amber-50 text-xl">🤝</span>
+            </div>
+            <h3 className="text-slate-500 text-sm font-medium">กำลังถูกยืม</h3>
+            <p className="text-2xl font-bold text-slate-900 mt-1">{stats.activeBorrowsQty} <span className="text-sm font-medium text-slate-400">ชิ้น</span></p>
+            <p className="text-xs text-slate-400 mt-0.5">{stats.activeBorrows} รายการ</p>
+          </div>
+          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between mb-3">
+              <span className="w-10 h-10 flex items-center justify-center rounded-xl bg-emerald-50 text-xl">✅</span>
+            </div>
+            <h3 className="text-slate-500 text-sm font-medium">คืนแล้ววันนี้</h3>
+            <p className="text-2xl font-bold text-slate-900 mt-1">{stats.returnedToday}</p>
+          </div>
+          
         </div>
 
         {/* Navigation Tabs */}

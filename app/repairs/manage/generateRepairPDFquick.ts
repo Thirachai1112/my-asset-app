@@ -89,7 +89,7 @@ export const generateRepairPDFquick = async (repair: RepairData) => {
     doc.rect(15, 78, 180, 25);
     doc.text(`อุปกรณ์: ${repair.item?.manual_brand || "-"}`, 20, 85);
     doc.text(`ประเภท: ${repair.item?.type_item || "-"}`, 110, 85);
-    doc.text(`เลขครุภัณฑ์: ${repair.item?.assets_number || "-"}`, 20, 92);
+    doc.text(`เลขทรัพย์สิน: ${repair.item?.assets_number || "-"}`, 20, 92);
     doc.text(`อาการเสียที่แจ้ง: ${repair.item?.problem_detail || "-"}`, 20, 99);
 
     // 4. บันทึกการแก้ไข (แบบด่วน - ย่อส่วน)

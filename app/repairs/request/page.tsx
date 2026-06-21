@@ -82,7 +82,7 @@ export default function NewRepairPage() {
         {/* Navigation */}
         <div className="mb-8 flex items-center justify-end">
           <Link href="/" className="text-sm bg-white border border-slate-200 px-4 py-2 rounded-xl hover:bg-slate-50 transition-colors shadow-sm font-medium flex items-center gap-2">
-            🏠 <span>กลับหน้าหลัก Portal</span>
+             ←  กลับหน้าหลัก Portal
           </Link>
         </div>
 
@@ -149,7 +149,7 @@ export default function NewRepairPage() {
                   <input type="text" value={manualSN} onChange={(e) => setManualSN(e.target.value)} placeholder="ระบุเลขซีเรียล" className="w-full bg-slate-50 border border-slate-200 focus:border-amber-500 focus:bg-white rounded-xl px-4 py-2.5 text-sm transition-all outline-none font-mono" />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5 ml-1">เลขครุภัณฑ์ (Asset Number)</label>
+                  <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5 ml-1">เลขทรัพย์สิน (Asset Number)</label>
                   <input type="text" value={assetsNumber} onChange={(e) => setAssetsNumber(e.target.value)} placeholder="เช่น 7440-001-0001" className="w-full bg-slate-50 border border-slate-200 focus:border-amber-500 focus:bg-white rounded-xl px-4 py-2.5 text-sm transition-all outline-none font-mono" />
                 </div>
                 <div className="md:col-span-2">

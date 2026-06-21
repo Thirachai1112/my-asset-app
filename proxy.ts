@@ -67,7 +67,7 @@ export async function proxy(request: NextRequest) {
   // --- กฎการเข้าถึงหน้าต่างๆ (Access Rules) ---
 
   // 1. ถ้าไม่ได้ Login และพยายามเข้าหน้าอื่นๆ (ยกเว้นหน้าแรก / และหน้า /login)
-  if (!isLoggedIn && path !== '/' && !path.startsWith('/login') && !path.startsWith('/repairs/request')) {
+  if (!isLoggedIn && path !== '/' && !path.startsWith('/login') && !path.startsWith('/repairs/request') && !path.startsWith('/borrows/request')) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 

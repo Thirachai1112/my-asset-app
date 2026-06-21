@@ -14,7 +14,7 @@ export default function TechnicianDashboard() {
             <span className="text-slate-900 font-medium">ศูนย์จัดการงานซ่อม (Technician)</span>
           </div>
           <Link href="/" className="text-sm bg-white border border-slate-200 px-4 py-2 rounded-xl hover:bg-slate-50 transition-colors shadow-sm font-medium flex items-center gap-2">
-            🏠 กลับหน้าหลัก
+             ←  กลับหน้าหลัก
           </Link>
         </div>
 

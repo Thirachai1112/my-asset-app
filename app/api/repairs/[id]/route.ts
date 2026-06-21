@@ -18,7 +18,17 @@ export async function PATCH(
       fix_detail,
       service_price,
       repair_item_id,
-      parts_usage // 💡 รายการอะไหล่ที่ใช้: [{ part_id, quantity }]
+      parts_usage, // 💡 รายการอะไหล่ที่ใช้: [{ part_id, quantity }]
+      // ฟิลด์จาก RepairTable (History Edit)
+      requester_name,
+      requester_dept,
+      requester_phone,
+      requester_position,
+      requester_emp_code,
+      problem_detail,
+      assets_number,
+      manual_contract,
+      type_item
     } = body
 
     const repairId = parseInt(id)
@@ -27,14 +37,14 @@ export async function PATCH(
       return NextResponse.json({ success: false, error: 'ID ไม่ถูกต้อง' }, { status: 400 })
     }
 
-    // 1. อัปเดตข้อมูลการซ่อมหลัก
-    const repairUpdates: any = {
-      status,
-      technician_name,
-      user_id: technician_id,
-      fix_detail,
-      service_price
-    }
+    // 1. อัปเดตข้อมูลการซ่อมหลัก (เฉพาะฟิลด์ที่ส่งมาเท่านั้น)
+    const repairUpdates: any = {}
+
+    if (status !== undefined) repairUpdates.status = status
+    if (technician_name !== undefined) repairUpdates.technician_name = technician_name
+    if (technician_id !== undefined) repairUpdates.user_id = technician_id
+    if (fix_detail !== undefined) repairUpdates.fix_detail = fix_detail
+    if (service_price !== undefined) repairUpdates.service_price = service_price
 
     if (status === 'Completed') {
       repairUpdates.repair_finish = new Date().toISOString()
@@ -46,6 +56,39 @@ export async function PATCH(
       .eq('id', repairId)
 
     if (repairError) throw repairError
+
+    // 1.5 อัปเดตข้อมูลผู้แจ้งซ่อมในตาราง repairs (จาก History Edit)
+    const requesterUpdates: any = {}
+    if (requester_name !== undefined) requesterUpdates.requester_name = requester_name
+    if (requester_dept !== undefined) requesterUpdates.requester_dept = requester_dept
+    if (requester_phone !== undefined) requesterUpdates.requester_phone = requester_phone
+    if (requester_position !== undefined) requesterUpdates.requester_position = requester_position
+    if (requester_emp_code !== undefined) requesterUpdates.requester_emp_code = requester_emp_code
+
+    if (Object.keys(requesterUpdates).length > 0) {
+      const { error: requesterError } = await supabase
+        .from('repairs')
+        .update(requesterUpdates)
+        .eq('id', repairId)
+
+      if (requesterError) throw requesterError
+    }
+
+    // 1.6 อัปเดตข้อมูล repair_items (จาก History Edit)
+    const itemUpdates: any = {}
+    if (problem_detail !== undefined) itemUpdates.problem_detail = problem_detail
+    if (assets_number !== undefined) itemUpdates.assets_number = assets_number
+    if (manual_contract !== undefined) itemUpdates.manual_contract = manual_contract
+    if (type_item !== undefined) itemUpdates.type_item = type_item
+
+    if (Object.keys(itemUpdates).length > 0 && repair_item_id) {
+      const { error: itemError } = await supabase
+        .from('repair_items')
+        .update(itemUpdates)
+        .eq('id', repair_item_id)
+
+      if (itemError) throw itemError
+    }
 
     // 2. จัดการเรื่องอะไหล่ (ถ้ามีการส่งมา)
     if (parts_usage && Array.isArray(parts_usage)) {

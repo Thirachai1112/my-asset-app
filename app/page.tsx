@@ -6,28 +6,31 @@ import Link from 'next/link'
 import { createBrowserClient } from '@supabase/ssr'
 import { useRouter } from 'next/navigation'
 import Swal from 'sweetalert2'
+import type { DashboardStats, AssetTypeBreakdown, Borrow, Repair, SparePart } from '@/types'
 
 export default function DashboardPortal() {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
   const [profile, setProfile] = useState<any>(null)
   const [loading, setLoading] = useState(true)
-  const [stats, setStats] = useState({
+  const [stats, setStats] = useState<DashboardStats>({
     totalAssets: 0,
     availableAssets: 0,
     borrowedAssets: 0,
     activeBorrowsCount: 0,
+    activeBorrowsQuantity: 0,
     overdueBorrowsCount: 0,
+    overdueBorrowsQuantity: 0,
     activeRepairsCount: 0,
     pendingRepairsCount: 0,
     inProgressRepairsCount: 0,
     totalRepairCost: 0,
   })
 
-  const [urgentReturns, setUrgentReturns] = useState<any[]>([])
-  const [lowStockParts, setLowStockParts] = useState<any[]>([])
-  const [assetTypes, setAssetTypes] = useState<{ type: string; count: number; percentage: number }[]>([])
-  const [recentRepairs, setRecentRepairs] = useState<any[]>([])
+  const [urgentReturns, setUrgentReturns] = useState<Borrow[]>([])
+  const [lowStockParts, setLowStockParts] = useState<SparePart[]>([])
+  const [assetTypes, setAssetTypes] = useState<AssetTypeBreakdown[]>([])
+  const [recentRepairs, setRecentRepairs] = useState<Repair[]>([])
 
   // ย้ายการสร้าง supabase client เข้ามาอยู่ใน useMemo หรือเช็คค่าก่อน
   const supabase = typeof window !== 'undefined' && process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -135,11 +138,13 @@ export default function DashboardPortal() {
       const borrows = borrowsRes.success ? (borrowsRes.history || []) : []
       const today = new Date()
       const activeBorrows = borrows.filter((b: any) => !b.return_date)
+      const activeBorrowsQuantity = activeBorrows.reduce((sum: number, b: any) => sum + (Number(b.quantity) || 0), 0)
       const urgent = activeBorrows.filter((b: any) => {
         if (!b.due_date) return false
         const diffDays = (new Date(b.due_date).getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
         return diffDays <= 2
       })
+      const urgentQuantity = urgent.reduce((sum: number, b: any) => sum + (Number(b.quantity) || 0), 0)
 
       const repairs = repairsRes.success ? (repairsRes.data || []) : []
       const activeRepairs = repairs.filter((r: any) => r.status === 'Pending' || r.status === 'In Progress')
@@ -153,7 +158,9 @@ export default function DashboardPortal() {
         availableAssets,
         borrowedAssets,
         activeBorrowsCount: activeBorrows.length,
+        activeBorrowsQuantity,
         overdueBorrowsCount: urgent.length,
+        overdueBorrowsQuantity: urgentQuantity,
         activeRepairsCount: activeRepairs.length,
         pendingRepairsCount: repairs.filter((r: any) => r.status === 'Pending').length,
         inProgressRepairsCount: repairs.filter((r: any) => r.status === 'In Progress').length,
@@ -199,15 +206,33 @@ export default function DashboardPortal() {
           ระบบบริหารจัดการครุภัณฑ์และงานแจ้งซ่อมแบบครบวงจร <br />
           กรุณาเข้าสู่ระบบเพื่อดำเนินการขอยืมอุปกรณ์ หรือแจ้งซ่อม
         </p>
-        <div className="flex flex-col sm:flex-row gap-4 w-full max-w-md">
-          <Link href="/login" className="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 px-8 rounded-2xl shadow-lg shadow-blue-500/20 transition-all text-lg">
-            เข้าสู่ระบบ-จัดการ
-            (Login-Admin)
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full max-w-2xl">
+          <Link
+            href="/login"
+            className="group relative bg-gradient-to-br from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white font-bold py-4 px-6 rounded-2xl shadow-lg shadow-blue-500/20 transition-all duration-200 text-center overflow-hidden"
+          >
+            <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <span className="relative z-10 block text-sm">🔐 เข้าสู่ระบบ</span>
+            <span className="relative z-10 block text-[10px] text-blue-200 mt-0.5">สำหรับเจ้าหน้าที่</span>
           </Link>
-          <Link href="/repairs/request" className="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-bold py-4 px-8 rounded-2xl transition-all text-lg">
-            แจ้งซ่อม (Guest)
+          <Link
+            href="/borrows/request"
+            className="group relative bg-gradient-to-br from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white font-bold py-4 px-6 rounded-2xl shadow-lg shadow-indigo-500/20 transition-all duration-200 text-center overflow-hidden"
+          >
+            <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <span className="relative z-10 block text-sm">📦 ยืมอุปกรณ์</span>
+            <span className="relative z-10 block text-[10px] text-indigo-200 mt-0.5">ขอยืมอุปกรณ์</span>
+          </Link>
+          <Link
+            href="/repairs/request"
+            className="group relative bg-gradient-to-br from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white font-bold py-4 px-6 rounded-2xl shadow-lg shadow-emerald-500/20 transition-all duration-200 text-center overflow-hidden"
+          >
+            <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <span className="relative z-10 block text-sm">🔧 แจ้งซ่อม</span>
+            <span className="relative z-10 block text-[10px] text-emerald-200 mt-0.5">แจ้งอาการเสีย</span>
           </Link>
         </div>
+        
       </main>
     )
   }
@@ -246,9 +271,9 @@ export default function DashboardPortal() {
             </div>
             <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 shadow-xl backdrop-blur-md">
               <div className="flex justify-between mb-4"><span className="text-[10px] font-bold text-slate-500 tracking-wider">กำลังถูกยืม</span><span>🤝</span></div>
-              <div className="text-3xl font-black text-white">{stats.activeBorrowsCount} <span className="text-sm font-medium text-slate-500">รายการ</span></div>
+              <div className="text-3xl font-black text-white">{stats.activeBorrowsQuantity} <span className="text-sm font-medium text-slate-500">ชิ้น</span></div>
               <div className="mt-4 flex justify-between text-xs border-t border-slate-800 pt-3">
-                <span className="text-slate-400">ปกติ</span>
+                <span className="text-slate-400">{stats.activeBorrowsCount} รายการ</span>
                 {stats.overdueBorrowsCount > 0 && <span className="text-red-400 font-bold animate-pulse">🚨 เลยกำหนด: {stats.overdueBorrowsCount}</span>}
               </div>
             </div>
@@ -274,15 +299,15 @@ export default function DashboardPortal() {
               <h4 className="font-bold text-white mb-2">จัดการงานซ่อม & อะไหล่</h4>
               <p className="text-slate-500 text-[11px] leading-relaxed">ควบคุมคิวงานแจ้งซ่อม จัดการสต็อกอะไหล่ และบันทึกค่าใช้จ่าย</p>
             </Link>
-            <Link href="/borrows/request" className="p-6 bg-slate-900 border border-slate-800 rounded-2xl hover:border-indigo-500/50 transition-all group">
-              <div className="w-10 h-10 bg-indigo-500/10 rounded-xl flex items-center justify-center text-xl mb-4 group-hover:bg-indigo-600 group-hover:text-white transition-all">🛒</div>
-              <h4 className="font-bold text-white mb-2">ฟอร์มขอยืมอุปกรณ์</h4>
-              <p className="text-slate-500 text-[11px] leading-relaxed">สำหรับทำรายการยืมใหม่และดาวน์โหลดเอกสาร PDF ภาษาไทย</p>
+            <Link href="/" className="p-6 bg-slate-900 border border-slate-800 rounded-2xl hover:border-indigo-500/50 transition-all group">
+              <div className="w-10 h-10 bg-indigo-500/10 rounded-xl flex items-center justify-center text-xl mb-4 group-hover:bg-indigo-600 group-hover:text-white transition-all">?</div>
+              <h4 className="font-bold text-white mb-2">เมนูในอนาคต</h4>
+              <p className="text-slate-500 text-[11px] leading-relaxed">ยังไม่มีกำหนดพัฒนา</p>
             </Link>
-            <Link href="/repairs/request" className="p-6 bg-slate-900 border border-slate-800 rounded-2xl hover:border-emerald-500/50 transition-all group">
-              <div className="w-10 h-10 bg-emerald-500/10 rounded-xl flex items-center justify-center text-xl mb-4 group-hover:bg-emerald-600 group-hover:text-white transition-all">🔧</div>
-              <h4 className="font-bold text-white mb-2">ฟอร์มแจ้งซ่อมอุปกรณ์</h4>
-              <p className="text-slate-500 text-[11px] leading-relaxed">บันทึกข้อมูลอาการเสียเพื่อส่งเรื่องให้ช่างดำเนินการแก้ไข</p>
+            <Link href="/" className="p-6 bg-slate-900 border border-slate-800 rounded-2xl hover:border-indigo-500/50 transition-all group">
+              <div className="w-10 h-10 bg-indigo-500/10 rounded-xl flex items-center justify-center text-xl mb-4 group-hover:bg-indigo-600 group-hover:text-white transition-all">?</div>
+              <h4 className="font-bold text-white mb-2">เมนูในอนาคต</h4>
+              <p className="text-slate-500 text-[11px] leading-relaxed">ยังไม่มีกำหนดพัฒนา</p>
             </Link>
           </div>
         </div>

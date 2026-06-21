@@ -11,7 +11,6 @@ function RepairsContent() {
   const searchParams = useSearchParams()
   const initialTab = searchParams.get('tab') || 'history'
   const [activeTab, setActiveTab] = useState(initialTab)
-
   useEffect(() => {
     const tab = searchParams.get('tab')
     if (tab) setActiveTab(tab)
@@ -28,7 +27,7 @@ function RepairsContent() {
             <span className="text-slate-900 font-medium">ระบบบริหารงานซ่อม & อะไหล่</span>
           </div>
           <Link href="/" className="text-sm bg-white border border-slate-200 px-4 py-2 rounded-xl hover:bg-slate-50 transition-colors shadow-sm font-medium flex items-center gap-2">
-            🏠 <span>กลับหน้าหลัก Portal</span>
+             <span>กลับหน้าหลัก Portal</span>
           </Link>
         </div>
 

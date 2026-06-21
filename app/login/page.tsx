@@ -80,29 +80,23 @@ export default function LoginPage() {
 
       <div className="w-full max-w-md bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[2.5rem] p-8 md:p-10 shadow-2xl relative z-10">
         <div className="text-center mb-10">
-          <div className="w-20 h-20 bg-gradient-to-tr from-purple-600 to-blue-600 rounded-3xl mx-auto flex items-center justify-center text-4xl shadow-lg shadow-blue-500/20 mb-6 font-bold text-white">
-            PEA
-          </div>
+        
           <h1 className="text-3xl font-black text-white tracking-tight mb-2 uppercase italic">
             IT Asset
           </h1>
-          <p className="text-slate-400 text-sm">ระบบจัดการครุภัณฑ์ (เข้าใช้งานด้วยรหัสพนักงาน)</p>
         </div>
 
         <form onSubmit={handleLogin} className="space-y-6">
           <div className="space-y-2">
             <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">
-              รหัสพนักงาน (Employee Code)
+              admin
             </label>
             <div className="relative group">
-              <span className="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-500 group-focus-within:text-purple-500 transition-colors">
-                🆔
-              </span>
+              
               <input
                 type="text"
                 value={empCode}
                 onChange={(e) => setEmpCode(e.target.value)}
-                placeholder="เช่น 50xxxx"
                 className="w-full bg-slate-800/50 border border-slate-700 text-white text-sm rounded-2xl block pl-11 p-3.5 focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none transition-all font-mono"
                 required
               />
@@ -111,17 +105,14 @@ export default function LoginPage() {
 
           <div className="space-y-2">
             <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">
-              รหัสผ่านเข้าเครื่อง (Computer Password)
+              Password
             </label>
             <div className="relative group">
-              <span className="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-500 group-focus-within:text-purple-500 transition-colors">
-                🔒
-              </span>
+              
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
                 className="w-full bg-slate-800/50 border border-slate-700 text-white text-sm rounded-2xl block pl-11 p-3.5 focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none transition-all"
                 required
               />
@@ -141,7 +132,7 @@ export default function LoginPage() {
             onClick={() => router.push('/')}
             className="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-4 rounded-2xl transition-all active:scale-[0.98] mt-2"
           >
-            กลับหน้าหลัก (Portal)
+          ←  กลับหน้าหลัก (Portal)
           </button>
         </form>
 
