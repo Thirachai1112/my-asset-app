@@ -73,12 +73,14 @@ export async function POST(request: Request) {
       }
     })
 
-    // 🍪 เซ็ต Cookie เพื่อเป็นบัตรผ่านให้ Middleware (มีอายุ 1 วัน)
+    // 🍪 เซ็ต Cookie เพื่อเป็นบัตรผ่านให้ Proxy/Middleware (มีอายุ 1 วัน)
+    // แก้ไข: ไม่ใช้ secure flag เพื่อให้ cookie ทำงานได้ทั้ง HTTP และ HTTPS
+    // (โดยเฉพาะเมื่อเข้าถึงจากเครื่องอื่นในเครือข่ายผ่าน IP)
     response.cookies.set('custom-auth-session', 'true', {
       path: '/',
       maxAge: 60 * 60 * 24, // 24 hours
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: false, // รองรับทั้ง HTTP และ HTTPS
       sameSite: 'lax'
     })
 

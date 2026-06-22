@@ -71,49 +71,64 @@ export default function LoginPage() {
   
 
   return (
-    <main className="min-h-screen bg-[#0f172a] flex items-center justify-center p-4 relative overflow-hidden font-sans">
-      {/* Background Decor */}
+    <main className="min-h-screen bg-[#0d0b1a] flex items-center justify-center p-4 relative overflow-hidden font-sans">
+      {/* Background Decor - Purple Theme */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-500/10 rounded-full blur-[120px]"></div>
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-indigo-500/10 rounded-full blur-[120px]"></div>
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-purple-500/10 rounded-full blur-[120px]"></div>
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-violet-600/10 rounded-full blur-[120px]"></div>
+        <div className="absolute top-[40%] right-[20%] w-[20%] h-[20%] bg-indigo-500/8 rounded-full blur-[100px]"></div>
       </div>
 
-      <div className="w-full max-w-md bg-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-[2.5rem] p-8 md:p-10 shadow-2xl relative z-10">
+      <div className="w-full max-w-md bg-[#15112b]/60 backdrop-blur-xl border border-[rgba(139,92,246,0.18)] rounded-[2.5rem] p-8 md:p-10 shadow-2xl relative z-10">
         <div className="text-center mb-10">
-        
-          <h1 className="text-3xl font-black text-white tracking-tight mb-2 uppercase italic">
+          {/* Logo Icon */}
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#8b5cf6] to-[#6D28D9] flex items-center justify-center text-3xl mx-auto mb-5 shadow-lg shadow-purple-500/20">
+            📦
+          </div>
+          <h1 className="text-3xl font-black text-white tracking-tight mb-1">
             IT Asset
           </h1>
+          <p className="text-sm text-[#9585c4]">ระบบบริหารจัดการครุภัณฑ์</p>
         </div>
 
-        <form onSubmit={handleLogin} className="space-y-6">
+        <form onSubmit={handleLogin} className="space-y-5">
           <div className="space-y-2">
-            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">
-              admin
+            <label className="text-[10px] font-bold text-[#9585c4] uppercase tracking-widest ml-1">
+              รหัสพนักงาน
             </label>
             <div className="relative group">
-              
+              <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
+                <svg className="w-4 h-4 text-[#9585c4]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              </div>
               <input
                 type="text"
                 value={empCode}
                 onChange={(e) => setEmpCode(e.target.value)}
-                className="w-full bg-slate-800/50 border border-slate-700 text-white text-sm rounded-2xl block pl-11 p-3.5 focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none transition-all font-mono"
+                placeholder="EMP001"
+                className="w-full bg-[#1e1840]/50 border border-[rgba(139,92,246,0.18)] text-white text-sm rounded-2xl block pl-11 p-3.5 focus:ring-2 focus:ring-purple-500/20 focus:border-[#8b5cf6] outline-none transition-all font-mono"
                 required
               />
             </div>
           </div>
 
           <div className="space-y-2">
-            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">
-              Password
+            <label className="text-[10px] font-bold text-[#9585c4] uppercase tracking-widest ml-1">
+              รหัสผ่าน
             </label>
             <div className="relative group">
-              
+              <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
+                <svg className="w-4 h-4 text-[#9585c4]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+              </div>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-slate-800/50 border border-slate-700 text-white text-sm rounded-2xl block pl-11 p-3.5 focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none transition-all"
+                placeholder="••••••••"
+                className="w-full bg-[#1e1840]/50 border border-[rgba(139,92,246,0.18)] text-white text-sm rounded-2xl block pl-11 p-3.5 focus:ring-2 focus:ring-purple-500/20 focus:border-[#8b5cf6] outline-none transition-all"
                 required
               />
             </div>
@@ -122,23 +137,28 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white font-bold py-4 rounded-2xl shadow-lg shadow-purple-500/20 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed mt-4"
+            className="w-full bg-gradient-to-r from-[#8b5cf6] to-[#6D28D9] hover:from-[#7c3aed] hover:to-[#5b21b6] text-white font-bold py-4 rounded-2xl shadow-lg shadow-purple-500/20 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed mt-2"
           >
-            {loading ? 'กำลังตรวจสอบสิทธิ์...' : 'เข้าสู่ระบบ'}
+            {loading ? (
+              <span className="flex items-center justify-center gap-2">
+                <span className="w-4 h-4 rounded-full animate-spin border-2 border-white/30 border-t-white"></span>
+                กำลังตรวจสอบสิทธิ์...
+              </span>
+            ) : '🔐 เข้าสู่ระบบ'}
           </button>
 
           <button
             type="button"
             onClick={() => router.push('/')}
-            className="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-4 rounded-2xl transition-all active:scale-[0.98] mt-2"
+            className="w-full bg-[#1e1840]/50 hover:bg-[#2a1f50] text-[#9585c4] hover:text-white font-bold py-4 rounded-2xl transition-all active:scale-[0.98] border border-[rgba(139,92,246,0.12)]"
           >
-          ←  กลับหน้าหลัก (Portal)
+            ← กลับหน้าหลัก
           </button>
         </form>
 
-        <div className="mt-8 text-center border-t border-slate-800 pt-6">
-          <p className="text-slate-500 text-xs">
-            พบปัญหาการเข้าใช้งาน? ติดต่อ <span className="text-purple-400 font-bold cursor-pointer hover:underline">แผนกไอที</span>
+        <div className="mt-8 text-center border-t border-[rgba(139,92,246,0.12)] pt-6">
+          <p className="text-[#9585c4] text-xs">
+            พบปัญหาการเข้าใช้งาน? ติดต่อ <span className="text-[#8b5cf6] font-bold cursor-pointer hover:underline">แผนกไอที</span>
           </p>
         </div>
       </div>

@@ -5,6 +5,24 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Swal from 'sweetalert2'
 
+const COLORS = {
+    primary: "#8b5cf6",
+    primaryLight: "rgba(139,92,246,0.12)",
+    primaryBorder: "rgba(139,92,246,0.18)",
+    bg: "#0d0b1a",
+    card: "#15112b",
+    cardBorder: "rgba(139,92,246,0.18)",
+    text: "#ece9f8",
+    muted: "#9585c4",
+    green: "#34d399",
+    red: "#ef4444",
+    blue: "#60a5fa",
+    purple: "#8b5cf6",
+    indigo: "#6366F1",
+    amber: "#f59e0b",
+    emerald: "#34d399",
+};
+
 export default function NewRepairPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
@@ -62,7 +80,7 @@ export default function NewRepairPage() {
           timer: 2000,
           showConfirmButton: false
         }).then(() => {
-          router.push('/') // ไปหน้ารายการแจ้งซ่อม
+          router.push('/')
         })
       } else {
         Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: json.error || 'ไม่สามารถบันทึกข้อมูลได้' })
@@ -76,106 +94,317 @@ export default function NewRepairPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 p-6 md:p-12 text-slate-800">
+    <main
+      className="min-h-screen p-4 md:p-8"
+      style={{ background: COLORS.bg, fontFamily: "'DM Sans', sans-serif" }}
+    >
       <div className="max-w-3xl mx-auto">
-        
-        {/* Navigation */}
-        <div className="mb-8 flex items-center justify-end">
-          <Link href="/" className="text-sm bg-white border border-slate-200 px-4 py-2 rounded-xl hover:bg-slate-50 transition-colors shadow-sm font-medium flex items-center gap-2">
-             ←  กลับหน้าหลัก Portal
-          </Link>
-        </div>
-
-        {/* Header */}
-        <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-200 mb-8 flex items-center gap-6">
-          <div className="w-16 h-16 bg-amber-100 rounded-2xl flex items-center justify-center text-3xl border border-amber-200 shadow-inner">
-            🔧
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900">แจ้งซ่อมอุปกรณ์ใหม่</h1>
-            <p className="text-slate-500 text-sm mt-1">กรุณากรอกข้อมูลผู้แจ้งและรายละเอียดอุปกรณ์ที่มีปัญหา</p>
+        {/* ===== HEADER ===== */}
+        <div
+          className="rounded-2xl p-6 md:p-8 mb-8 relative overflow-hidden"
+          style={{
+            background: "linear-gradient(135deg, #7C3AED 0%, #6D28D9 50%, #5B21B6 100%)",
+            border: `1px solid ${COLORS.primaryBorder}`,
+          }}
+        >
+          <div
+            className="absolute -top-16 -right-16 w-64 h-64 rounded-full"
+            style={{
+              background: "radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 70%)",
+            }}
+          />
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between relative">
+            <div className="flex items-center gap-4">
+              <div
+                className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl"
+                style={{ background: "rgba(255,255,255,0.12)" }}
+              >
+                🔧
+              </div>
+              <div>
+                <h1
+                  className="text-2xl md:text-3xl font-bold text-white"
+                  style={{ fontFamily: "'Playfair Display', serif", letterSpacing: "-0.02em" }}
+                >
+                  แจ้งซ่อมอุปกรณ์ใหม่
+                </h1>
+                <p className="text-sm mt-1" style={{ color: "rgba(255,255,255,0.7)" }}>
+                  กรุณากรอกข้อมูลผู้แจ้งและรายละเอียดอุปกรณ์ที่มีปัญหา
+                </p>
+              </div>
+            </div>
+            <Link
+              href="/"
+              className="mt-4 md:mt-0 inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all"
+              style={{
+                background: "rgba(255,255,255,0.1)",
+                color: "#FFFFFF",
+                border: "1px solid rgba(255,255,255,0.15)",
+              }}
+            >
+              ← กลับหน้าหลัก
+            </Link>
           </div>
         </div>
 
         {/* Form Card */}
-        <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-          <form onSubmit={handleSubmit} className="p-8 space-y-8">
+        <div
+          className="rounded-2xl overflow-hidden"
+          style={{ background: COLORS.card, border: `1px solid ${COLORS.cardBorder}` }}
+        >
+          <form onSubmit={handleSubmit} className="p-6 md:p-8 space-y-8">
             
             {/* ข้อมูลผู้แจ้ง */}
             <section>
-              <h5 className="text-sm font-bold text-blue-600 mb-4 flex items-center gap-2">
-                <span className="bg-blue-100 p-1.5 rounded-lg text-xs">👤</span> ข้อมูลผู้แจ้งซ่อม
+              <h5
+                className="text-sm font-bold mb-4 flex items-center gap-2"
+                style={{ color: COLORS.blue }}
+              >
+                <span
+                  className="p-1.5 rounded-lg text-xs"
+                  style={{ background: COLORS.primaryLight }}
+                >
+                  👤
+                </span>
+                ข้อมูลผู้แจ้งซ่อม
               </h5>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div className="md:col-span-2">
-                  <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5 ml-1">ชื่อผู้แจ้งซ่อม <span className="text-red-500">*</span></label>
-                  <input type="text" value={requesterName} onChange={(e) => setRequesterName(e.target.value)} placeholder="ระบุชื่อ-นามสกุล" className="w-full bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white rounded-xl px-4 py-2.5 text-sm transition-all outline-none" required />
+                  <label className="block text-xs font-semibold mb-1.5" style={{ color: COLORS.muted }}>
+                    ชื่อผู้แจ้งซ่อม <span style={{ color: COLORS.red }}>*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={requesterName}
+                    onChange={(e) => setRequesterName(e.target.value)}
+                    placeholder="ระบุชื่อ-นามสกุล"
+                    className="w-full rounded-xl px-4 py-2.5 text-sm transition-all outline-none"
+                    style={{
+                      background: COLORS.bg,
+                      border: `1px solid ${COLORS.primaryBorder}`,
+                      color: COLORS.text,
+                    }}
+                    required
+                  />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5 ml-1">รหัสพนักงาน</label>
-                  <input type="text" value={requesterEmpCode} onChange={(e) => setRequesterEmpCode(e.target.value)} placeholder="เช่น EMP001" className="w-full bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white rounded-xl px-4 py-2.5 text-sm transition-all outline-none" />
+                  <label className="block text-xs font-semibold mb-1.5" style={{ color: COLORS.muted }}>
+                    รหัสพนักงาน
+                  </label>
+                  <input
+                    type="text"
+                    value={requesterEmpCode}
+                    onChange={(e) => setRequesterEmpCode(e.target.value)}
+                    placeholder="เช่น EMP001"
+                    className="w-full rounded-xl px-4 py-2.5 text-sm transition-all outline-none"
+                    style={{
+                      background: COLORS.bg,
+                      border: `1px solid ${COLORS.primaryBorder}`,
+                      color: COLORS.text,
+                    }}
+                  />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5 ml-1">ตำแหน่งงาน</label>
-                  <input type="text" value={requesterPosition} onChange={(e) => setRequesterPosition(e.target.value)} placeholder="เช่น เจ้าหน้าที่ไอที" className="w-full bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white rounded-xl px-4 py-2.5 text-sm transition-all outline-none" />
+                  <label className="block text-xs font-semibold mb-1.5" style={{ color: COLORS.muted }}>
+                    ตำแหน่งงาน
+                  </label>
+                  <input
+                    type="text"
+                    value={requesterPosition}
+                    onChange={(e) => setRequesterPosition(e.target.value)}
+                    placeholder="เช่น เจ้าหน้าที่ไอที"
+                    className="w-full rounded-xl px-4 py-2.5 text-sm transition-all outline-none"
+                    style={{
+                      background: COLORS.bg,
+                      border: `1px solid ${COLORS.primaryBorder}`,
+                      color: COLORS.text,
+                    }}
+                  />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5 ml-1">แผนก /กอง/ ฝ่าย</label>
-                  <input type="text" value={requesterDept} onChange={(e) => setRequesterDept(e.target.value)} placeholder="เช่น ไอที, บัญชี" className="w-full bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white rounded-xl px-4 py-2.5 text-sm transition-all outline-none" />
+                  <label className="block text-xs font-semibold mb-1.5" style={{ color: COLORS.muted }}>
+                    แผนก / กอง / ฝ่าย
+                  </label>
+                  <input
+                    type="text"
+                    value={requesterDept}
+                    onChange={(e) => setRequesterDept(e.target.value)}
+                    placeholder="เช่น ไอที, บัญชี"
+                    className="w-full rounded-xl px-4 py-2.5 text-sm transition-all outline-none"
+                    style={{
+                      background: COLORS.bg,
+                      border: `1px solid ${COLORS.primaryBorder}`,
+                      color: COLORS.text,
+                    }}
+                  />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5 ml-1">เบอร์โทรศัพท์ติดต่อ</label>
-                  <input type="text" value={requesterPhone} onChange={(e) => setRequesterPhone(e.target.value)} placeholder="ระบุเบอร์โทร" className="w-full bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white rounded-xl px-4 py-2.5 text-sm transition-all outline-none" />
+                  <label className="block text-xs font-semibold mb-1.5" style={{ color: COLORS.muted }}>
+                    เบอร์โทรศัพท์ติดต่อ
+                  </label>
+                  <input
+                    type="text"
+                    value={requesterPhone}
+                    onChange={(e) => setRequesterPhone(e.target.value)}
+                    placeholder="ระบุเบอร์โทร"
+                    className="w-full rounded-xl px-4 py-2.5 text-sm transition-all outline-none"
+                    style={{
+                      background: COLORS.bg,
+                      border: `1px solid ${COLORS.primaryBorder}`,
+                      color: COLORS.text,
+                    }}
+                  />
                 </div>
               </div>
             </section>
 
             {/* ข้อมูลอุปกรณ์ */}
             <section>
-              <h5 className="text-sm font-bold text-amber-600 mb-4 flex items-center gap-2">
-                <span className="bg-amber-100 p-1.5 rounded-lg text-xs">📦</span> ข้อมูลอุปกรณ์ที่มีปัญหา
+              <h5
+                className="text-sm font-bold mb-4 flex items-center gap-2"
+                style={{ color: COLORS.amber }}
+              >
+                <span
+                  className="p-1.5 rounded-lg text-xs"
+                  style={{ background: COLORS.primaryLight }}
+                >
+                  📦
+                </span>
+                ข้อมูลอุปกรณ์ที่มีปัญหา
               </h5>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
-                  <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5 ml-1">ประเภทอุปกรณ์</label>
-                  <input type="text" value={typeItem} onChange={(e) => setTypeItem(e.target.value)} placeholder="เช่น Notebook, Printer" className="w-full bg-slate-50 border border-slate-200 focus:border-amber-500 focus:bg-white rounded-xl px-4 py-2.5 text-sm transition-all outline-none" />
+                  <label className="block text-xs font-semibold mb-1.5" style={{ color: COLORS.muted }}>
+                    ประเภทอุปกรณ์
+                  </label>
+                  <input
+                    type="text"
+                    value={typeItem}
+                    onChange={(e) => setTypeItem(e.target.value)}
+                    placeholder="เช่น Notebook, Printer"
+                    className="w-full rounded-xl px-4 py-2.5 text-sm transition-all outline-none"
+                    style={{
+                      background: COLORS.bg,
+                      border: `1px solid ${COLORS.primaryBorder}`,
+                      color: COLORS.text,
+                    }}
+                  />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5 ml-1">ชื่ออุปกรณ์ / ยี่ห้อ / รุ่น <span className="text-red-500">*</span></label>
-                  <input type="text" value={manualBrand} onChange={(e) => setManualBrand(e.target.value)} placeholder="เช่น Laptop Dell Latitude 5420" className="w-full bg-slate-50 border border-slate-200 focus:border-amber-500 focus:bg-white rounded-xl px-4 py-2.5 text-sm transition-all outline-none" required />
+                  <label className="block text-xs font-semibold mb-1.5" style={{ color: COLORS.muted }}>
+                    ชื่ออุปกรณ์ / ยี่ห้อ / รุ่น <span style={{ color: COLORS.red }}>*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={manualBrand}
+                    onChange={(e) => setManualBrand(e.target.value)}
+                    placeholder="เช่น Laptop Dell Latitude 5420"
+                    className="w-full rounded-xl px-4 py-2.5 text-sm transition-all outline-none"
+                    style={{
+                      background: COLORS.bg,
+                      border: `1px solid ${COLORS.primaryBorder}`,
+                      color: COLORS.text,
+                    }}
+                    required
+                  />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5 ml-1">Serial Number (S/N)</label>
-                  <input type="text" value={manualSN} onChange={(e) => setManualSN(e.target.value)} placeholder="ระบุเลขซีเรียล" className="w-full bg-slate-50 border border-slate-200 focus:border-amber-500 focus:bg-white rounded-xl px-4 py-2.5 text-sm transition-all outline-none font-mono" />
+                  <label className="block text-xs font-semibold mb-1.5" style={{ color: COLORS.muted }}>
+                    Serial Number (S/N)
+                  </label>
+                  <input
+                    type="text"
+                    value={manualSN}
+                    onChange={(e) => setManualSN(e.target.value)}
+                    placeholder="ระบุเลขซีเรียล"
+                    className="w-full rounded-xl px-4 py-2.5 text-sm transition-all outline-none font-mono"
+                    style={{
+                      background: COLORS.bg,
+                      border: `1px solid ${COLORS.primaryBorder}`,
+                      color: COLORS.text,
+                    }}
+                  />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5 ml-1">เลขทรัพย์สิน (Asset Number)</label>
-                  <input type="text" value={assetsNumber} onChange={(e) => setAssetsNumber(e.target.value)} placeholder="เช่น 7440-001-0001" className="w-full bg-slate-50 border border-slate-200 focus:border-amber-500 focus:bg-white rounded-xl px-4 py-2.5 text-sm transition-all outline-none font-mono" />
+                  <label className="block text-xs font-semibold mb-1.5" style={{ color: COLORS.muted }}>
+                    เลขทรัพย์สิน (Asset Number)
+                  </label>
+                  <input
+                    type="text"
+                    value={assetsNumber}
+                    onChange={(e) => setAssetsNumber(e.target.value)}
+                    placeholder="เช่น 7440-001-0001"
+                    className="w-full rounded-xl px-4 py-2.5 text-sm transition-all outline-none font-mono"
+                    style={{
+                      background: COLORS.bg,
+                      border: `1px solid ${COLORS.primaryBorder}`,
+                      color: COLORS.text,
+                    }}
+                  />
                 </div>
                 <div className="md:col-span-2">
-                  <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5 ml-1">เลขสัญญา</label>
-                  <input type="text" value={manualContract} onChange={(e) => setManualContract(e.target.value)} placeholder="ระบุเลขที่อ้างอิง" className="w-full bg-slate-50 border border-slate-200 focus:border-amber-500 focus:bg-white rounded-xl px-4 py-2.5 text-sm transition-all outline-none font-mono" />
+                  <label className="block text-xs font-semibold mb-1.5" style={{ color: COLORS.muted }}>
+                    เลขสัญญา
+                  </label>
+                  <input
+                    type="text"
+                    value={manualContract}
+                    onChange={(e) => setManualContract(e.target.value)}
+                    placeholder="ระบุเลขที่อ้างอิง"
+                    className="w-full rounded-xl px-4 py-2.5 text-sm transition-all outline-none font-mono"
+                    style={{
+                      background: COLORS.bg,
+                      border: `1px solid ${COLORS.primaryBorder}`,
+                      color: COLORS.text,
+                    }}
+                  />
                 </div>
                 <div className="md:col-span-2">
-                  <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5 ml-1">อาการเสีย / รายละเอียดงานซ่อม <span className="text-red-500">*</span></label>
-                  <textarea value={problemDetail} onChange={(e) => setProblemDetail(e.target.value)} placeholder="กรุณาระบุอาการที่พบ หรือสิ่งที่ต้องการให้แก้ไข..." className="w-full bg-slate-50 border border-slate-200 focus:border-amber-500 focus:bg-white rounded-xl px-4 py-2.5 text-sm transition-all outline-none" rows={4} required />
+                  <label className="block text-xs font-semibold mb-1.5" style={{ color: COLORS.muted }}>
+                    อาการเสีย / รายละเอียดงานซ่อม <span style={{ color: COLORS.red }}>*</span>
+                  </label>
+                  <textarea
+                    value={problemDetail}
+                    onChange={(e) => setProblemDetail(e.target.value)}
+                    placeholder="กรุณาระบุอาการที่พบ หรือสิ่งที่ต้องการให้แก้ไข..."
+                    className="w-full rounded-xl px-4 py-2.5 text-sm transition-all outline-none"
+                    style={{
+                      background: COLORS.bg,
+                      border: `1px solid ${COLORS.primaryBorder}`,
+                      color: COLORS.text,
+                    }}
+                    rows={4}
+                    required
+                  />
                 </div>
               </div>
             </section>
 
             {/* Buttons */}
-            <div className="flex gap-4 pt-4 border-t border-slate-100">
+            <div className="flex gap-4 pt-4" style={{ borderTop: `1px solid ${COLORS.primaryBorder}` }}>
               <button
                 type="button"
                 onClick={() => router.back()}
-                className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-3 rounded-2xl transition-colors"
+                className="flex-1 font-bold py-3 rounded-2xl transition-colors text-sm"
+                style={{
+                  background: COLORS.bg,
+                  color: COLORS.muted,
+                  border: `1px solid ${COLORS.primaryBorder}`,
+                }}
               >
                 ยกเลิก
               </button>
               <button
                 type="submit"
                 disabled={loading}
-                className={`flex-1 bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 rounded-2xl shadow-lg shadow-slate-200 transition-all ${loading ? 'opacity-50 cursor-not-allowed' : 'active:scale-95'}`}
+                className="flex-1 font-bold py-3 rounded-2xl transition-all text-sm"
+                style={{
+                  background: `linear-gradient(135deg, ${COLORS.primary}, #6D28D9)`,
+                  color: "#FFFFFF",
+                  boxShadow: `0 8px 25px rgba(139,92,246,0.3)`,
+                  opacity: loading ? 0.5 : 1,
+                  cursor: loading ? 'not-allowed' : 'pointer',
+                }}
               >
                 {loading ? 'กำลังบันทึกข้อมูล...' : '🚀 ยืนยันการแจ้งซ่อม'}
               </button>
@@ -185,7 +414,7 @@ export default function NewRepairPage() {
         </div>
 
         {/* Footer Note */}
-        <p className="mt-8 text-center text-slate-400 text-xs leading-relaxed">
+        <p className="mt-8 text-center text-xs leading-relaxed" style={{ color: COLORS.muted }}>
           หากพบปัญหาในการใช้งานระบบ กรุณาติดต่อแผนกไอที <br />
           หรือโทรสายด่วน 064-9265-374 ต่อ 10366
         </p>

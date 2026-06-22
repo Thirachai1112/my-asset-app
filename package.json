@@ -3,10 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 next dev --experimental-https",
+    "dev": "cross-env NODE_TLS_REJECT_UNAUTHORIZED=0 next dev --experimental-https -H 0.0.0.0",
     "download-font": "node scripts/download-font.js",
     "build": "next build",
-    "start": "next start",
+    "start": "next start -H 0.0.0.0",
     "lint": "eslint"
   },
   "dependencies": {
@@ -15,9 +15,11 @@
     "@supabase/supabase-js": "^2.107.0",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.8",
+    "lucide-react": "^1.21.0",
     "next": "16.2.7",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "recharts": "^3.8.1",
     "sweetalert2": "^11.26.25",
     "xlsx": "^0.18.5"
   },

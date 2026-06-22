@@ -4,7 +4,6 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Swal from "sweetalert2";
-// 📄 นำเข้าฟังก์ชันสร้างเอกสาร PDF ที่อยู่ข้างกันเข้ามาใช้งาน
 import { generateBorrowPDF } from "./generateBorrowPDF";
 
 interface Asset {
@@ -16,15 +15,13 @@ interface Asset {
     type: string;
     serial_number: string;
     contract_number: string;
-    status: string; // ว่าง, กำลังใช้งาน, ชำรุด
+    status: string;
 }
 
-// 🎯 โครงสร้างไอเทมในตะกร้า (ขยายเพิ่มฟิลด์ quantity เพื่อเก็บจำนวนชิ้น)
 interface CartItem extends Asset {
     quantity: number;
 }
 
-// 🗺️ ออบเจกต์แมปไอคอนตามประเภทอุปกรณ์ สำหรับธีมดาร์ก
 const ASSET_TYPES: { [key: string]: string } = {
     Notebook: "💻",
     Tablet: "📱",
@@ -42,27 +39,41 @@ const ASSET_TYPES: { [key: string]: string } = {
     "Wiring set": "🔌"
 };
 
+const COLORS = {
+    primary: "#8b5cf6",
+    primaryLight: "rgba(139,92,246,0.12)",
+    primaryBorder: "rgba(139,92,246,0.18)",
+    bg: "#0d0b1a",
+    card: "#15112b",
+    cardBorder: "rgba(139,92,246,0.18)",
+    text: "#ece9f8",
+    muted: "#9585c4",
+    green: "#34d399",
+    red: "#ef4444",
+    blue: "#60a5fa",
+    purple: "#8b5cf6",
+    indigo: "#6366F1",
+    amber: "#f59e0b",
+    emerald: "#34d399",
+};
+
 export default function BorrowRequestPage() {
     const [assets, setAssets] = useState<Asset[]>([]);
     const [isMounted, setIsMounted] = useState(false);
-
     const [searchTerm, setSearchTerm] = useState("");
-    const [cart, setCart] = useState<CartItem[]>([]); // 🎯 ปรับ State รองรับ CartItem ชนิดใหม่ที่มีจำนวนชิ้น
+    const [cart, setCart] = useState<CartItem[]>([]);
     const [loading, setLoading] = useState(true);
 
-    // ข้อมูลฟอร์มผู้ยืม
     const [borrowerPurpose, setBorrowerPurpose] = useState("");
     const [borrowerName, setBorrowerName] = useState("");
-    const [position, setPosition] = useState(""); // 🛠️ State สำหรับตำแหน่งงาน
+    const [position, setPosition] = useState("");
     const [department, setDepartment] = useState("");
     const [phone, setPhone] = useState("");
     const [returnDate, setReturnDate] = useState("");
 
-    // 🎯 State สำหรับระบบ Pagination (แบ่งตารางหน้าละ 5 รายการ)
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 5;
 
-    // 1. ดึงข้อมูลครุภัณฑ์ทั้งหมดจากหลังบ้าน
     useEffect(() => {
         fetch("/api/assets")
             .then((res) => res.json())
@@ -79,7 +90,6 @@ export default function BorrowRequestPage() {
             });
     }, [loading]);
 
-    // 2. ฟังก์ชันเพิ่มของเข้าตะกร้า (ถ้าซ้ำชิ้นเดิมจะไปบวกเพิ่มจำนวนที่หางตะกร้า)
     const addToCart = (asset: Asset) => {
         setCart((prevCart) => {
             const existing = prevCart.find((item) => item.id === asset.id);
@@ -94,20 +104,17 @@ export default function BorrowRequestPage() {
         });
     };
 
-    // 🎯 ฟังก์ชันเพิ่ม/ลดจำนวนชิ้นอุปกรณ์ในหน้าตะกร้าโดยตรง
     const updateQuantity = (id: string, newQty: number) => {
-        if (newQty < 1) return; // ล็อกไม่ให้ลดจนติดลบหรือเป็น 0 (ถ้าจะเอาออกให้กดรูปถังขยะ)
+        if (newQty < 1) return;
         setCart((prevCart) =>
             prevCart.map((item) => (item.id === id ? { ...item, quantity: newQty } : item))
         );
     };
 
-    // 3. ฟังก์ชันลบของออกจากตะกร้า
     const removeFromCart = (id: string) => {
         setCart(cart.filter((item) => item.id !== id));
     };
 
-    // 🔍 4. ตรรกะการกรองค้นหา และแยกประเภทออกเป็น 2 ตาราง
     const searchLower = searchTerm.toLowerCase().trim();
 
     const searchedAssets = assets.filter((asset) => {
@@ -119,23 +126,19 @@ export default function BorrowRequestPage() {
         return name.includes(searchLower) || code.includes(searchLower) || type.includes(searchLower) || serial.includes(searchLower) || brand.includes(searchLower);
     });
 
-    // 🟢 ตารางบน: ครุภัณฑ์ที่พร้อมให้ยืม (สถานะ ว่าง หรือ Available)
     const availableAssets = searchedAssets.filter(
         (item) => item.status === "ว่าง" || item.status === "Available"
     );
 
-    // 🎯 คำนวณตัดแบ่งข้อมูลครุภัณฑ์ที่พร้อมยืม ให้เหลือแสดงหน้าละ 5 รายการ
     const indexOfLastItem = currentPage * itemsPerPage;
     const indexOfFirstItem = indexOfLastItem - itemsPerPage;
     const currentAvailableAssets = availableAssets.slice(indexOfFirstItem, indexOfLastItem);
     const totalPages = Math.ceil(availableAssets.length / itemsPerPage);
 
-    // 🔒 ตารางล่าง: ครุภัณฑ์ที่ถูกยืมอยู่ หรือไม่ว่างชั่วคราว
     const borrowedAssets = searchedAssets.filter(
         (item) => item.status !== "ว่าง" && item.status !== "Available"
     );
 
-    // 5. ส่งคำขอยืมชุดใหญ่ไปที่หลังบ้าน
     const handleSubmitBorrow = async (e: React.FormEvent) => {
         e.preventDefault();
 
@@ -156,7 +159,7 @@ export default function BorrowRequestPage() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     borrower_name: borrowerName,
-                    position: position, // 🛠️ ส่งค่าตำแหน่งไปยัง API
+                    position: position,
                     borrower_purpose: borrowerPurpose,
                     department: department,
                     phone: phone,
@@ -168,7 +171,7 @@ export default function BorrowRequestPage() {
                         asset_type: item.type,
                         serial_number: item.serial_number,
                         contract_number: item.contract_number,
-                        quantity: item.quantity // 🎯 แนบจำนวนชิ้นแต่ละไอเทมส่งไปหลังบ้าน
+                        quantity: item.quantity
                     }))
                 })
             });
@@ -178,11 +181,10 @@ export default function BorrowRequestPage() {
                 throw new Error(errorData.error || errorData.message || `Server ตอบกลับด้วยรหัสสถานะ ${response.status}`);
             }
 
-            // 📄 เรียกใช้ไฟล์ Utility เพื่อสั่งสร้างและดาวน์โหลดเอกสาร PDF ทันที
             await generateBorrowPDF(
                 {
                     borrower_name: borrowerName,
-                    position: position, // 🛠️ ส่งค่าตำแหน่งไปพ่นใน PDF
+                    position: position,
                     borrower_purpose: borrowerPurpose,
                     department: department,
                     phone: phone,
@@ -196,7 +198,7 @@ export default function BorrowRequestPage() {
                     type: item.type,
                     serial_number: item.serial_number,
                     contract_number: item.contract_number,
-                    quantity: item.quantity // 🎯 แนบจำนวนชิ้นส่งไปจัดสไตล์พ่นในไฟล์ PDF
+                    quantity: item.quantity
                 }))
             );
 
@@ -204,11 +206,11 @@ export default function BorrowRequestPage() {
                 icon: "success",
                 title: "ส่งคำขอยืมสำเร็จแล้ว!",
                 text: "ระบบได้บันทึกข้อมูลและกำลังดาวน์โหลดใบอนุมัติยืม PDF",
-                confirmButtonColor: "#3b82f6"
+                confirmButtonColor: "#8b5cf6"
             }).then(() => {
                 setCart([]);
                 setBorrowerName("");
-                setPosition(""); // 🛠️ ล้างค่าหลังส่งฟอร์มสำเร็จ
+                setPosition("");
                 setDepartment("");
                 setPhone("");
                 setReturnDate("");
@@ -229,99 +231,183 @@ export default function BorrowRequestPage() {
     if (!isMounted) return null;
 
     return (
-        <main className="min-h-screen bg-slate-950 text-slate-100 p-4 md:p-8 font-sans">
+        <main
+            className="min-h-screen p-4 md:p-8"
+            style={{ background: COLORS.bg, fontFamily: "'DM Sans', sans-serif" }}
+        >
             <div className="max-w-7xl mx-auto">
-
-                {/* ส่วนหัวหน้าจอ */}
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 pb-4 border-b border-slate-800">
-                    <div>
-                        <h1 className="text-3xl font-extrabold text-white flex items-center gap-3">
-                            🛒 ระบบส่งคำขอยืมอุปกรณ์
-                        </h1>
-                        <p className="text-slate-400 text-sm mt-1">เลือกอุปกรณ์ที่ต้องการใส่ตะกร้า จากนั้นกรอกข้อมูลยืมด้านขวาได้เลย</p>
+                {/* ===== HEADER ===== */}
+                <div
+                    className="rounded-2xl p-6 md:p-8 mb-8 relative overflow-hidden"
+                    style={{
+                        background: "linear-gradient(135deg, #7C3AED 0%, #6D28D9 50%, #5B21B6 100%)",
+                        border: `1px solid ${COLORS.primaryBorder}`,
+                    }}
+                >
+                    <div
+                        className="absolute -top-16 -right-16 w-64 h-64 rounded-full"
+                        style={{
+                            background: "radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 70%)",
+                        }}
+                    />
+                    <div className="flex flex-col md:flex-row md:items-center md:justify-between relative">
+                        <div className="flex items-center gap-4">
+                            <div
+                                className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl"
+                                style={{ background: "rgba(255,255,255,0.12)" }}
+                            >
+                                🛒
+                            </div>
+                            <div>
+                                <h1
+                                    className="text-2xl md:text-3xl font-bold text-white"
+                                    style={{ fontFamily: "'Playfair Display', serif", letterSpacing: "-0.02em" }}
+                                >
+                                    ระบบส่งคำขอยืมอุปกรณ์
+                                </h1>
+                                <p className="text-sm mt-1" style={{ color: "rgba(255,255,255,0.7)" }}>
+                                    เลือกอุปกรณ์ที่ต้องการใส่ตะกร้า จากนั้นกรอกข้อมูลยืมด้านขวาได้เลย
+                                </p>
+                            </div>
+                        </div>
+                        <Link
+                            href="/"
+                            className="mt-4 md:mt-0 inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all"
+                            style={{
+                                background: "rgba(255,255,255,0.1)",
+                                color: "#FFFFFF",
+                                border: "1px solid rgba(255,255,255,0.15)",
+                            }}
+                        >
+                            ← กลับหน้าหลัก
+                        </Link>
                     </div>
-                    <Link href="/" className="mt-4 md:mt-0 text-sm bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2 rounded-xl transition-colors border border-slate-700">
-                        ← กลับหน้าหลัก
-                    </Link>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-
                     {/* ================= ฝั่งซ้าย: โซนตารางข้อมูลครุภัณฑ์ ================= */}
                     <div className="lg:col-span-2 space-y-6">
-
                         {/* 🟢 ตารางที่ 1: อุปกรณ์ที่พร้อมให้ยืม */}
-                        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
-                            <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-                                🟢 อุปกรณ์ที่พร้อมให้ยืม ({availableAssets.length} รายการ)
-                            </h2>
+                        <div
+                            className="rounded-2xl p-6"
+                            style={{ background: COLORS.card, border: `1px solid ${COLORS.cardBorder}` }}
+                        >
+                            <div className="flex items-center justify-between mb-5">
+                                <h2
+                                    className="text-lg font-bold flex items-center gap-2"
+                                    style={{ color: COLORS.text, fontFamily: "'Playfair Display', serif" }}
+                                >
+                                    <span className="w-3 h-3 rounded-full" style={{ background: COLORS.green }}></span>
+                                    อุปกรณ์ที่พร้อมให้ยืม
+                                    <span
+                                        className="text-xs px-2.5 py-1 rounded-full font-mono"
+                                        style={{ background: COLORS.primaryLight, color: COLORS.primary }}
+                                    >
+                                        {availableAssets.length} รายการ
+                                    </span>
+                                </h2>
+                            </div>
 
                             {/* ช่องค้นหา */}
-                            <div className="mb-4">
-                                <input
-                                    type="text"
-                                    placeholder="🔍 ค้นหาด้วย ชื่ออุปกรณ์, แบรนด์, ประเภท, รหัส หรือ Serial Number..."
-                                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 text-sm transition-colors"
-                                    value={searchTerm}
-                                    onChange={(e) => {
-                                        setSearchTerm(e.target.value);
-                                        setCurrentPage(1); // ดีดกลับหน้า 1 อัตโนมัติป้องกันบั๊กหน้าว่าง
-                                    }}
-                                />
+                            <div className="mb-5">
+                                <div className="relative">
+                                    <span className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none" style={{ color: COLORS.muted }}>
+                                        🔍
+                                    </span>
+                                    <input
+                                        type="text"
+                                        placeholder="ค้นหาด้วย ชื่ออุปกรณ์, แบรนด์, ประเภท, รหัส หรือ Serial Number..."
+                                        className="w-full rounded-xl pl-11 pr-4 py-3 text-sm transition-all outline-none"
+                                        style={{
+                                            background: COLORS.bg,
+                                            border: `1px solid ${COLORS.primaryBorder}`,
+                                            color: COLORS.text,
+                                        }}
+                                        value={searchTerm}
+                                        onChange={(e) => {
+                                            setSearchTerm(e.target.value);
+                                            setCurrentPage(1);
+                                        }}
+                                    />
+                                </div>
                             </div>
 
                             {/* ตารางข้อมูลที่พร้อมยืม */}
                             {loading ? (
-                                <div className="text-center py-8 text-slate-400">กำลังโหลดรายการอุปกรณ์...</div>
+                                <div className="text-center py-12" style={{ color: COLORS.muted }}>
+                                    <div
+                                        className="w-10 h-10 rounded-full mx-auto mb-4 animate-spin"
+                                        style={{
+                                            border: "3px solid rgba(139,92,246,0.1)",
+                                            borderTopColor: COLORS.primary,
+                                        }}
+                                    />
+                                    กำลังโหลดรายการอุปกรณ์...
+                                </div>
                             ) : availableAssets.length === 0 ? (
-                                <div className="text-center py-8 text-slate-500">❌ ไม่พบข้อมูลอุปกรณ์ที่พร้อมยืม</div>
+                                <div className="text-center py-12" style={{ color: COLORS.muted }}>
+                                    <span className="text-4xl block mb-3">📭</span>
+                                    ไม่พบข้อมูลอุปกรณ์ที่พร้อมยืม
+                                </div>
                             ) : (
                                 <>
-                                    <div className="overflow-x-auto">
+                                    <div className="overflow-x-auto rounded-xl" style={{ border: `1px solid ${COLORS.primaryBorder}` }}>
                                         <table className="w-full text-left text-sm">
                                             <thead>
-                                                <tr className="border-b border-slate-800 text-slate-400 font-semibold bg-slate-950/40">
-                                                    <th className="p-3">ชื่ออุปกรณ์</th>
-                                                    <th className="p-3">แบรนด์</th>
-                                                    <th className="p-3">ประเภท</th>
-                                                    <th className="p-3">รหัส/Serial</th>
-                                                    <th className="p-3">รหัสทรัพย์สิน</th>
-                                                    <th className="p-3">เลขที่สัญญา</th>
-                                                    <th className="p-3 text-center">การกระทำ</th>
+                                                <tr style={{ background: COLORS.bg, borderBottom: `1px solid ${COLORS.primaryBorder}` }}>
+                                                    <th className="p-4 text-xs font-semibold uppercase tracking-wider" style={{ color: COLORS.muted }}>ชื่ออุปกรณ์</th>
+                                                    <th className="p-4 text-xs font-semibold uppercase tracking-wider" style={{ color: COLORS.muted }}>แบรนด์</th>
+                                                    <th className="p-4 text-xs font-semibold uppercase tracking-wider" style={{ color: COLORS.muted }}>ประเภท</th>
+                                                    <th className="p-4 text-xs font-semibold uppercase tracking-wider" style={{ color: COLORS.muted }}>รหัส/Serial</th>
+                                                    <th className="p-4 text-xs font-semibold uppercase tracking-wider" style={{ color: COLORS.muted }}>รหัสทรัพย์สิน</th>
+                                                    <th className="p-4 text-xs font-semibold uppercase tracking-wider" style={{ color: COLORS.muted }}>เลขที่สัญญา</th>
+                                                    <th className="p-4 text-center text-xs font-semibold uppercase tracking-wider" style={{ color: COLORS.muted }}>การกระทำ</th>
                                                 </tr>
                                             </thead>
-                                            <tbody className="divide-y divide-slate-800/60">
+                                            <tbody className="divide-y" style={{ borderColor: COLORS.primaryBorder }}>
                                                 {currentAvailableAssets.map((asset) => {
                                                     const assetType = asset.type || "Other";
                                                     const typeIcon = ASSET_TYPES[assetType] || "🛠️";
 
                                                     return (
-                                                        <tr key={asset.id} className="hover:bg-slate-800/30 transition-colors">
-                                                            <td className="p-3">
-                                                                <div className="text-white font-semibold">{asset.name || "-"}</div>
+                                                        <tr key={asset.id} className="transition-colors hover:bg-white/[0.02]">
+                                                            <td className="p-4">
+                                                                <div className="font-semibold" style={{ color: COLORS.text }}>{asset.name || "-"}</div>
                                                             </td>
-                                                            <td className="p-3 text-slate-300 font-mono text-xs">
+                                                            <td className="p-4 font-mono text-xs" style={{ color: COLORS.muted }}>
                                                                 {asset.brand || "-"}
                                                             </td>
-                                                            <td className="p-3">
-                                                                <span className="px-2.5 py-1 bg-slate-950 text-slate-300 border border-slate-800 rounded-lg text-xs font-medium inline-flex items-center gap-1.5">
+                                                            <td className="p-4">
+                                                                <span
+                                                                    className="px-2.5 py-1 rounded-lg text-xs font-medium inline-flex items-center gap-1.5"
+                                                                    style={{
+                                                                        background: COLORS.primaryLight,
+                                                                        color: COLORS.primary,
+                                                                        border: `1px solid ${COLORS.primaryBorder}`,
+                                                                    }}
+                                                                >
                                                                     {typeIcon} {assetType}
                                                                 </span>
                                                             </td>
-                                                            <td className="p-3 text-slate-300 font-mono text-xs">
+                                                            <td className="p-4 font-mono text-xs" style={{ color: COLORS.muted }}>
                                                                 {asset.serial_number || "-"}
                                                             </td>
-                                                            <td className="p-3 text-slate-300 font-mono text-xs">
+                                                            <td className="p-4 font-mono text-xs" style={{ color: COLORS.muted }}>
                                                                 {asset.asset_code || "-"}
                                                             </td>
-                                                            <td className="p-3 text-xs font-mono text-slate-400">
+                                                            <td className="p-4 text-xs font-mono" style={{ color: COLORS.muted }}>
                                                                 {asset.contract_number || "-"}
                                                             </td>
-                                                            <td className="p-3 text-center">
+                                                            <td className="p-4 text-center">
                                                                 <button
                                                                     type="button"
                                                                     onClick={() => addToCart(asset)}
-                                                                    className="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg font-medium text-xs transition-colors flex items-center gap-1 mx-auto shadow-lg shadow-blue-900/20"
+                                                                    className="px-4 py-2 rounded-lg font-medium text-xs transition-all flex items-center gap-1.5 mx-auto"
+                                                                    style={{
+                                                                        background: COLORS.primary,
+                                                                        color: "#FFFFFF",
+                                                                        boxShadow: `0 4px 15px rgba(139,92,246,0.3)`,
+                                                                    }}
                                                                 >
                                                                     <span>+</span> ใส่ตะกร้า
                                                                 </button>
@@ -333,10 +419,10 @@ export default function BorrowRequestPage() {
                                         </table>
                                     </div>
 
-                                    {/* 🎯 บล็อกชุดปุ่มกด Pagination ใต้ตาราง Available */}
+                                    {/* Pagination */}
                                     {totalPages > 1 && (
-                                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mt-4 pt-4 border-t border-slate-800/60 gap-3">
-                                            <p className="text-xs text-slate-500 text-center sm:text-left">
+                                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mt-5 pt-4 gap-3" style={{ borderTop: `1px solid ${COLORS.primaryBorder}` }}>
+                                            <p className="text-xs" style={{ color: COLORS.muted }}>
                                                 แสดง {indexOfFirstItem + 1} ถึง {Math.min(indexOfLastItem, availableAssets.length)} จากทั้งหมด {availableAssets.length} รายการ
                                             </p>
                                             <div className="flex items-center justify-center space-x-1.5">
@@ -344,7 +430,12 @@ export default function BorrowRequestPage() {
                                                     type="button"
                                                     disabled={currentPage === 1}
                                                     onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                                                    className="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-slate-950 border border-slate-800 text-slate-400 hover:text-white disabled:opacity-40 disabled:hover:text-slate-400 transition-colors"
+                                                    className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors disabled:opacity-40"
+                                                    style={{
+                                                        background: COLORS.bg,
+                                                        border: `1px solid ${COLORS.primaryBorder}`,
+                                                        color: COLORS.muted,
+                                                    }}
                                                 >
                                                     ก่อนหน้า
                                                 </button>
@@ -354,10 +445,12 @@ export default function BorrowRequestPage() {
                                                         key={page}
                                                         type="button"
                                                         onClick={() => setCurrentPage(page)}
-                                                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${currentPage === page
-                                                                ? "bg-blue-600 text-white"
-                                                                : "bg-slate-950 border border-slate-800 text-slate-400 hover:text-white"
-                                                            }`}
+                                                        className="w-8 h-8 flex items-center justify-center rounded-lg text-xs font-semibold transition-colors"
+                                                        style={{
+                                                            background: currentPage === page ? COLORS.primary : COLORS.bg,
+                                                            color: currentPage === page ? "#FFFFFF" : COLORS.muted,
+                                                            border: currentPage === page ? "none" : `1px solid ${COLORS.primaryBorder}`,
+                                                        }}
                                                     >
                                                         {page}
                                                     </button>
@@ -367,7 +460,12 @@ export default function BorrowRequestPage() {
                                                     type="button"
                                                     disabled={currentPage === totalPages}
                                                     onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                                                    className="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-slate-950 border border-slate-800 text-slate-400 hover:text-white disabled:opacity-40 disabled:hover:text-slate-400 transition-colors"
+                                                    className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors disabled:opacity-40"
+                                                    style={{
+                                                        background: COLORS.bg,
+                                                        border: `1px solid ${COLORS.primaryBorder}`,
+                                                        color: COLORS.muted,
+                                                    }}
                                                 >
                                                     ถัดไป
                                                 </button>
@@ -380,61 +478,82 @@ export default function BorrowRequestPage() {
 
                         {/* 🔒 ตารางที่ 2: ครุภัณฑ์ที่อยู่ระหว่างการยืมหรือชำรุด */}
                         {!loading && (
-                            <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-6 shadow-xl">
-                                <h2 className="text-sm font-bold text-slate-400 mb-2 flex items-center gap-2">
-                                    🔒 อุปกรณ์ที่ไม่ว่างชั่วคราว ({borrowedAssets.length} รายการ)
+                            <div
+                                className="rounded-2xl p-6"
+                                style={{ background: COLORS.card, border: `1px solid ${COLORS.primaryBorder}` }}
+                            >
+                                <h2 className="text-sm font-bold mb-2 flex items-center gap-2" style={{ color: COLORS.muted }}>
+                                    🔒 อุปกรณ์ที่ไม่ว่างชั่วคราว
+                                    <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "rgba(239,68,68,0.1)", color: COLORS.red }}>
+                                        {borrowedAssets.length} รายการ
+                                    </span>
                                 </h2>
-                                <p className="text-xs text-slate-600 mb-4">อุปกรณ์กลุ่มนี้อยู่ระหว่างการใช้งานหรือชำรุด จะเปิดให้ยืมเมื่อได้รับการส่งคืนและปรับสถานะ</p>
+                                <p className="text-xs mb-5" style={{ color: COLORS.muted }}>
+                                    อุปกรณ์กลุ่มนี้อยู่ระหว่างการใช้งานหรือชำรุด จะเปิดให้ยืมเมื่อได้รับการส่งคืนและปรับสถานะ
+                                </p>
 
                                 {borrowedAssets.length === 0 ? (
-                                    <div className="text-center py-6 text-slate-600 text-xs">✨ ไม่มีอุปกรณ์ถูกยืมอยู่ ทุกชิ้นพร้อมใช้งานทั้งหมด</div>
+                                    <div className="text-center py-8 text-xs" style={{ color: COLORS.muted }}>
+                                        ✨ ไม่มีอุปกรณ์ถูกยืมอยู่ ทุกชิ้นพร้อมใช้งานทั้งหมด
+                                    </div>
                                 ) : (
-                                    <div className="overflow-x-auto">
+                                    <div className="overflow-x-auto rounded-xl" style={{ border: `1px solid ${COLORS.primaryBorder}` }}>
                                         <table className="w-full text-left text-xs sm:text-sm">
                                             <thead>
-                                                <tr className="border-b border-slate-800/60 text-slate-500 font-medium">
-                                                    <th className="p-3">ชื่ออุปกรณ์</th>
-                                                    <th className="p-3">แบรนด์</th>
-                                                    <th className="p-3">ประเภท</th>
-                                                    <th className="p-3">รหัส/Serial</th>
-                                                    <th className="p-3">รหัสทรัพย์สิน</th>
-                                                    <th className="p-3">เลขที่สัญญา</th>
-                                                    <th className="p-3 text-center">สถานะ</th>
+                                                <tr style={{ background: COLORS.bg, borderBottom: `1px solid ${COLORS.primaryBorder}` }}>
+                                                    <th className="p-3 text-xs font-semibold uppercase tracking-wider" style={{ color: COLORS.muted }}>ชื่ออุปกรณ์</th>
+                                                    <th className="p-3 text-xs font-semibold uppercase tracking-wider" style={{ color: COLORS.muted }}>แบรนด์</th>
+                                                    <th className="p-3 text-xs font-semibold uppercase tracking-wider" style={{ color: COLORS.muted }}>ประเภท</th>
+                                                    <th className="p-3 text-xs font-semibold uppercase tracking-wider" style={{ color: COLORS.muted }}>รหัส/Serial</th>
+                                                    <th className="p-3 text-xs font-semibold uppercase tracking-wider" style={{ color: COLORS.muted }}>รหัสทรัพย์สิน</th>
+                                                    <th className="p-3 text-xs font-semibold uppercase tracking-wider" style={{ color: COLORS.muted }}>เลขที่สัญญา</th>
+                                                    <th className="p-3 text-center text-xs font-semibold uppercase tracking-wider" style={{ color: COLORS.muted }}>สถานะ</th>
                                                 </tr>
                                             </thead>
-                                            <tbody className="divide-y divide-slate-800/30 text-slate-400">
+                                            <tbody className="divide-y" style={{ borderColor: COLORS.primaryBorder }}>
                                                 {borrowedAssets.map((asset) => {
                                                     const assetType = asset.type || "Other";
                                                     const typeIcon = ASSET_TYPES[assetType] || "🛠️";
                                                     const isBroken = asset.status === "ชำรุด";
 
                                                     return (
-                                                        <tr key={asset.id} className="hover:bg-slate-800/10 transition-colors opacity-70">
+                                                        <tr key={asset.id} className="transition-colors opacity-60 hover:opacity-80">
                                                             <td className="p-3">
-                                                                <div className="text-slate-400 font-medium">{asset.name || "-"}</div>
+                                                                <div className="font-medium" style={{ color: COLORS.text }}>{asset.name || "-"}</div>
                                                             </td>
-                                                            <td className="p-3 text-slate-500 font-mono text-xs">
+                                                            <td className="p-3 font-mono text-xs" style={{ color: COLORS.muted }}>
                                                                 {asset.brand || "-"}
                                                             </td>
                                                             <td className="p-3">
-                                                                <span className="px-2 py-0.5 bg-slate-950/50 text-slate-500 border border-slate-900 rounded text-xs inline-flex items-center gap-1">
+                                                                <span
+                                                                    className="px-2 py-0.5 rounded text-xs inline-flex items-center gap-1"
+                                                                    style={{
+                                                                        background: COLORS.bg,
+                                                                        color: COLORS.muted,
+                                                                        border: `1px solid ${COLORS.primaryBorder}`,
+                                                                    }}
+                                                                >
                                                                     {typeIcon} {assetType}
                                                                 </span>
                                                             </td>
-                                                            <td className="p-3 text-slate-500 font-mono text-xs">
+                                                            <td className="p-3 font-mono text-xs" style={{ color: COLORS.muted }}>
                                                                 {asset.serial_number || "-"}
                                                             </td>
-                                                            <td className="p-3 text-slate-500 font-mono text-xs">
+                                                            <td className="p-3 font-mono text-xs" style={{ color: COLORS.muted }}>
                                                                 {asset.asset_code || "-"}
                                                             </td>
-                                                            <td className="p-3 text-xs font-mono text-slate-600">
+                                                            <td className="p-3 text-xs font-mono" style={{ color: COLORS.muted }}>
                                                                 {asset.contract_number || "-"}
                                                             </td>
                                                             <td className="p-3 text-center">
-                                                                <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold border ${isBroken
-                                                                        ? "bg-red-950/40 text-red-400 border-red-900/40"
-                                                                        : "bg-amber-950/40 text-amber-400 border-amber-900/40"
-                                                                    }`}>
+                                                                <span
+                                                                    className="inline-flex items-center px-2.5 py-0.5 rounded-md text-[11px] font-semibold border"
+                                                                    style={{
+                                                                        background: isBroken ? "rgba(239,68,68,0.1)" : "rgba(245,158,11,0.1)",
+                                                                        color: isBroken ? COLORS.red : COLORS.amber,
+                                                                        borderColor: isBroken ? "rgba(239,68,68,0.2)" : "rgba(245,158,11,0.2)",
+                                                                    }}
+                                                                >
                                                                     ● {asset.status || "ถูกยืมอยู่"}
                                                                 </span>
                                                             </td>
@@ -451,10 +570,16 @@ export default function BorrowRequestPage() {
 
                     {/* ================= ฝั่งขวา: ตะกร้าและฟอร์มส่งข้อมูล ================= */}
                     <div className="space-y-6">
-                        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl sticky top-6">
-                            <h2 className="text-xl font-bold text-white mb-4 flex items-center justify-between">
+                        <div
+                            className="rounded-2xl p-6 sticky top-6"
+                            style={{ background: COLORS.card, border: `1px solid ${COLORS.cardBorder}` }}
+                        >
+                            <h2 className="text-lg font-bold mb-5 flex items-center justify-between" style={{ color: COLORS.text, fontFamily: "'Playfair Display', serif" }}>
                                 📋 รายการใบยืมของคุณ
-                                <span className="text-xs bg-blue-500/10 text-blue-400 px-2.5 py-1 rounded-full border border-blue-500/20">
+                                <span
+                                    className="text-xs px-3 py-1 rounded-full font-mono"
+                                    style={{ background: COLORS.primaryLight, color: COLORS.primary, border: `1px solid ${COLORS.primaryBorder}` }}
+                                >
                                     {cart.reduce((sum, item) => sum + item.quantity, 0)} ชิ้น
                                 </span>
                             </h2>
@@ -462,31 +587,48 @@ export default function BorrowRequestPage() {
                             {/* รายการของในตะกร้า */}
                             <div className="mb-6 space-y-2 max-h-48 overflow-y-auto pr-1">
                                 {cart.length === 0 ? (
-                                    <div className="text-center py-6 border-2 border-dashed border-slate-800 rounded-xl text-slate-500 text-xs">
+                                    <div
+                                        className="text-center py-8 rounded-xl text-xs"
+                                        style={{
+                                            border: `2px dashed ${COLORS.primaryBorder}`,
+                                            color: COLORS.muted,
+                                        }}
+                                    >
                                         🛒 ตะกร้ายังว่างเปล่า <br />กรุณากดเลือกอุปกรณ์จากฝั่งซ้าย
                                     </div>
                                 ) : (
                                     cart.map((item) => (
-                                        <div key={item.id} className="bg-slate-950 border border-slate-800 rounded-xl p-3 flex items-center justify-between text-xs hover:border-slate-700 transition-colors gap-2">
-                                            <div className="truncate max-w-[50%]">
-                                                <div className="font-bold text-white truncate">{item.name}</div>
-                                                <div className="text-slate-500 font-mono mt-0.5">{item.asset_code}</div>
+                                        <div
+                                            key={item.id}
+                                            className="rounded-xl p-3 flex items-center justify-between text-xs gap-2 transition-colors"
+                                            style={{
+                                                background: COLORS.bg,
+                                                border: `1px solid ${COLORS.primaryBorder}`,
+                                            }}
+                                        >
+                                            <div className="truncate max-w-[45%]">
+                                                <div className="font-bold truncate" style={{ color: COLORS.text }}>{item.name}</div>
+                                                <div className="font-mono mt-0.5" style={{ color: COLORS.muted }}>{item.asset_code}</div>
                                             </div>
 
-                                            {/* ปุ่มเพิ่ม-ลดจำนวนชิ้นของอุปกรณ์แต่ละชิ้น */}
-                                            <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-800 rounded-lg p-1 shrink-0">
+                                            <div
+                                                className="flex items-center gap-1.5 rounded-lg p-1 shrink-0"
+                                                style={{ background: COLORS.card, border: `1px solid ${COLORS.primaryBorder}` }}
+                                            >
                                                 <button
                                                     type="button"
                                                     onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                                                    className="w-5 h-5 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 rounded transition-colors font-bold text-sm"
+                                                    className="w-6 h-6 flex items-center justify-center rounded transition-colors font-bold text-sm"
+                                                    style={{ color: COLORS.muted }}
                                                 >
                                                     -
                                                 </button>
-                                                <span className="text-white font-bold w-5 text-center text-xs">{item.quantity}</span>
+                                                <span className="font-bold w-6 text-center text-xs" style={{ color: COLORS.text }}>{item.quantity}</span>
                                                 <button
                                                     type="button"
                                                     onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                                                    className="w-5 h-5 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 rounded transition-colors font-bold text-sm"
+                                                    className="w-6 h-6 flex items-center justify-center rounded transition-colors font-bold text-sm"
+                                                    style={{ color: COLORS.muted }}
                                                 >
                                                     +
                                                 </button>
@@ -495,7 +637,8 @@ export default function BorrowRequestPage() {
                                             <button
                                                 type="button"
                                                 onClick={() => removeFromCart(item.id)}
-                                                className="text-red-400 hover:text-red-300 font-bold p-1 hover:bg-red-500/10 rounded-lg transition-colors shrink-0"
+                                                className="p-1.5 rounded-lg transition-colors shrink-0"
+                                                style={{ color: COLORS.red }}
                                             >
                                                 🗑️
                                             </button>
@@ -505,89 +648,124 @@ export default function BorrowRequestPage() {
                             </div>
 
                             {/* ฟอร์มกรอกข้อมูลผู้ยืม */}
-                            <form onSubmit={handleSubmitBorrow} className="space-y-4 border-t border-slate-800 pt-4">
-                                <div>
-                                    <label className="block text-xs font-semibold text-slate-400 mb-1.5">วัตถุประสงค์การใช้งาน</label>
-                                    <input
-                                        type="text"
-                                        required
-                                        placeholder="ระบุวัตถุประสงค์การใช้งาน"
-                                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-slate-100 text-sm focus:outline-none focus:border-blue-500"
-                                        value={borrowerPurpose}
-                                        onChange={(e) => setBorrowerPurpose(e.target.value)}
-                                    />
-                                </div>
+                            <form onSubmit={handleSubmitBorrow} className="space-y-4" style={{ borderTop: `1px solid ${COLORS.primaryBorder}` }}>
+                                <div className="pt-4 space-y-4">
+                                    <div>
+                                        <label className="block text-xs font-semibold mb-1.5" style={{ color: COLORS.muted }}>วัตถุประสงค์การใช้งาน</label>
+                                        <input
+                                            type="text"
+                                            required
+                                            placeholder="ระบุวัตถุประสงค์การใช้งาน"
+                                            className="w-full rounded-xl px-4 py-2.5 text-sm transition-all outline-none"
+                                            style={{
+                                                background: COLORS.bg,
+                                                border: `1px solid ${COLORS.primaryBorder}`,
+                                                color: COLORS.text,
+                                            }}
+                                            value={borrowerPurpose}
+                                            onChange={(e) => setBorrowerPurpose(e.target.value)}
+                                        />
+                                    </div>
 
-                                <div>
-                                    <label className="block text-xs font-semibold text-slate-400 mb-1.5">ชื่อ-นามสกุล ผู้ยืม</label>
-                                    <input
-                                        type="text"
-                                        required
-                                        placeholder="ระบุชื่อจริงของคุณ"
-                                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-slate-100 text-sm focus:outline-none focus:border-blue-500"
-                                        value={borrowerName}
-                                        onChange={(e) => setBorrowerName(e.target.value)}
-                                    />
-                                </div>
+                                    <div>
+                                        <label className="block text-xs font-semibold mb-1.5" style={{ color: COLORS.muted }}>ชื่อ-นามสกุล ผู้ยืม</label>
+                                        <input
+                                            type="text"
+                                            required
+                                            placeholder="ระบุชื่อจริงของคุณ"
+                                            className="w-full rounded-xl px-4 py-2.5 text-sm transition-all outline-none"
+                                            style={{
+                                                background: COLORS.bg,
+                                                border: `1px solid ${COLORS.primaryBorder}`,
+                                                color: COLORS.text,
+                                            }}
+                                            value={borrowerName}
+                                            onChange={(e) => setBorrowerName(e.target.value)}
+                                        />
+                                    </div>
 
-                                {/* 🛠️ เพิ่มฟิลด์ตำแหน่งงาน (Job Position) ตรงนี้ */}
-                                <div>
-                                    <label className="block text-xs font-semibold text-slate-400 mb-1.5">ตำแหน่งงาน (Position)</label>
-                                    <input
-                                        type="text"
-                                        required
-                                        placeholder="เช่น Engineer, Technician, Admin"
-                                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-slate-100 text-sm focus:outline-none focus:border-blue-500"
-                                        value={position}
-                                        onChange={(e) => setPosition(e.target.value)}
-                                    />
-                                </div>
+                                    <div>
+                                        <label className="block text-xs font-semibold mb-1.5" style={{ color: COLORS.muted }}>ตำแหน่งงาน (Position)</label>
+                                        <input
+                                            type="text"
+                                            required
+                                            placeholder="เช่น Engineer, Technician, Admin"
+                                            className="w-full rounded-xl px-4 py-2.5 text-sm transition-all outline-none"
+                                            style={{
+                                                background: COLORS.bg,
+                                                border: `1px solid ${COLORS.primaryBorder}`,
+                                                color: COLORS.text,
+                                            }}
+                                            value={position}
+                                            onChange={(e) => setPosition(e.target.value)}
+                                        />
+                                    </div>
 
-                                <div>
-                                    <label className="block text-xs font-semibold text-slate-400 mb-1.5">แผนก/ฝ่าย (Department)</label>
-                                    <input
-                                        type="text"
-                                        required
-                                        placeholder="ระบุฝ่ายหรือแผนกสังกัด"
-                                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-slate-100 text-sm focus:outline-none focus:border-blue-500"
-                                        value={department}
-                                        onChange={(e) => setDepartment(e.target.value)}
-                                    />
-                                </div>
+                                    <div>
+                                        <label className="block text-xs font-semibold mb-1.5" style={{ color: COLORS.muted }}>แผนก/ฝ่าย (Department)</label>
+                                        <input
+                                            type="text"
+                                            required
+                                            placeholder="ระบุฝ่ายหรือแผนกสังกัด"
+                                            className="w-full rounded-xl px-4 py-2.5 text-sm transition-all outline-none"
+                                            style={{
+                                                background: COLORS.bg,
+                                                border: `1px solid ${COLORS.primaryBorder}`,
+                                                color: COLORS.text,
+                                            }}
+                                            value={department}
+                                            onChange={(e) => setDepartment(e.target.value)}
+                                        />
+                                    </div>
 
-                                <div>
-                                    <label className="block text-xs font-semibold text-slate-400 mb-1.5">เบอร์โทรศัพท์ติดต่อ</label>
-                                    <input
-                                        type="tel"
-                                        required
-                                        placeholder="ระบุเบอร์โทรศัพท์ 10 หลัก"
-                                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-slate-100 text-sm focus:outline-none focus:border-blue-500"
-                                        value={phone}
-                                        onChange={(e) => setPhone(e.target.value)}
-                                    />
-                                </div>
+                                    <div>
+                                        <label className="block text-xs font-semibold mb-1.5" style={{ color: COLORS.muted }}>เบอร์โทรศัพท์ติดต่อ</label>
+                                        <input
+                                            type="tel"
+                                            required
+                                            placeholder="ระบุเบอร์โทรศัพท์ 10 หลัก"
+                                            className="w-full rounded-xl px-4 py-2.5 text-sm transition-all outline-none"
+                                            style={{
+                                                background: COLORS.bg,
+                                                border: `1px solid ${COLORS.primaryBorder}`,
+                                                color: COLORS.text,
+                                            }}
+                                            value={phone}
+                                            onChange={(e) => setPhone(e.target.value)}
+                                        />
+                                    </div>
 
-                                <div>
-                                    <label className="block text-xs font-semibold text-slate-400 mb-1.5">วันกำหนดส่งคืนอุปกรณ์</label>
-                                    <input
-                                        type="date"
-                                        required
-                                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-slate-100 text-sm focus:outline-none focus:border-blue-500"
-                                        value={returnDate}
-                                        onChange={(e) => setReturnDate(e.target.value)}
-                                    />
-                                </div>
+                                    <div>
+                                        <label className="block text-xs font-semibold mb-1.5" style={{ color: COLORS.muted }}>วันกำหนดส่งคืนอุปกรณ์</label>
+                                        <input
+                                            type="date"
+                                            required
+                                            className="w-full rounded-xl px-4 py-2.5 text-sm transition-all outline-none"
+                                            style={{
+                                                background: COLORS.bg,
+                                                border: `1px solid ${COLORS.primaryBorder}`,
+                                                color: COLORS.text,
+                                            }}
+                                            value={returnDate}
+                                            onChange={(e) => setReturnDate(e.target.value)}
+                                        />
+                                    </div>
 
-                                <button
-                                    type="submit"
-                                    className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-4 rounded-xl text-sm transition-colors shadow-lg shadow-blue-900/30 mt-2"
-                                >
-                                    💾 ยืนยันคำขอยืมและพิมพ์ใบอนุมัติ
-                                </button>
+                                    <button
+                                        type="submit"
+                                        className="w-full font-bold py-3.5 px-4 rounded-xl text-sm transition-all mt-2"
+                                        style={{
+                                            background: `linear-gradient(135deg, ${COLORS.primary}, #6D28D9)`,
+                                            color: "#FFFFFF",
+                                            boxShadow: `0 8px 25px rgba(139,92,246,0.3)`,
+                                        }}
+                                    >
+                                        💾 ยืนยันคำขอยืมและพิมพ์ใบอนุมัติ
+                                    </button>
+                                </div>
                             </form>
                         </div>
                     </div>
-
                 </div>
             </div>
         </main>

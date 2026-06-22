@@ -60,9 +60,19 @@ export async function proxy(request: NextRequest) {
   )
 
   // ตรวจสอบข้อมูล User จาก Auth Session (Supabase) และจาก Cookie (Custom API)
-  const { data: { user } } = await supabase.auth.getUser()
+  let isLoggedIn = false
+  
+  try {
+    const { data: { user } } = await supabase.auth.getUser()
+    isLoggedIn = !!user
+  } catch (e) {
+    // ถ้า Supabase Auth มีปัญหา ให้ใช้ Custom Session แทน
+    console.error('[Proxy] Supabase auth error:', e)
+  }
+  
+  // ตรวจสอบ Custom Session Cookie (ใช้เป็น Fallback)
   const hasCustomSession = request.cookies.has('custom-auth-session')
-  const isLoggedIn = user || hasCustomSession
+  isLoggedIn = isLoggedIn || hasCustomSession
 
   // --- กฎการเข้าถึงหน้าต่างๆ (Access Rules) ---
 

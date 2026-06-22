@@ -8,6 +8,107 @@ import { useRouter } from 'next/navigation'
 import Swal from 'sweetalert2'
 import type { DashboardStats, AssetTypeBreakdown, Borrow, Repair, SparePart } from '@/types'
 
+// --- Chart & Icon Imports ---
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+} from "recharts"
+import {
+  LayoutDashboard,
+  TrendingUp,
+  Building2,
+  Bitcoin,
+  Wallet,
+  ArrowUpRight,
+  ArrowDownRight,
+  Bell,
+  Settings,
+  ChevronRight,
+  BarChart3,
+  FileText,
+  LogOut,
+  Search,
+  Plus,
+  Package,
+  Wrench,
+  ClipboardList,
+  AlertTriangle,
+  CheckCircle2,
+  Clock,
+  Users,
+  Box,
+  RefreshCw,
+} from "lucide-react"
+
+// --- Helper ---
+function fmt(n: number) {
+  return new Intl.NumberFormat("th-TH", {
+    style: "currency",
+    currency: "THB",
+    maximumFractionDigits: 0,
+  }).format(n)
+}
+
+function fmtNum(n: number) {
+  return new Intl.NumberFormat("th-TH").format(n)
+}
+
+// --- Custom Tooltip for AreaChart ---
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div
+        style={{
+          background: "#FFFFFF",
+          border: "1px solid rgba(124,58,237,0.15)",
+          borderRadius: 8,
+          padding: "8px 14px",
+          fontFamily: "'DM Mono', monospace",
+          fontSize: 12,
+        }}
+      >
+        <p style={{ color: "#6B7280", marginBottom: 2 }}>{label}</p>
+        <p style={{ color: "#7C3AED", fontWeight: 500 }}>
+          {fmtNum(payload[0].value)}
+        </p>
+      </div>
+    )
+  }
+  return null
+}
+
+// --- Navigation Items ---
+const navItems = [
+  { icon: LayoutDashboard, label: "ภาพรวม", href: "/", active: true },
+  { icon: Package, label: "ครุภัณฑ์", href: "/borrows" },
+  { icon: Wrench, label: "งานซ่อม", href: "/repairs" },
+]
+
+// --- Color Palette (Dark Purple Theme via CSS Variables) ---
+const COLORS = {
+  primary: "#8b5cf6",
+  primaryLight: "rgba(139,92,246,0.12)",
+  primaryBorder: "rgba(139,92,246,0.18)",
+  bg: "#0d0b1a",
+  card: "#15112b",
+  cardBorder: "rgba(139,92,246,0.18)",
+  text: "#ece9f8",
+  muted: "#9585c4",
+  green: "#34d399",
+  red: "#ef4444",
+  blue: "#60a5fa",
+  purple: "#8b5cf6",
+  indigo: "#6366F1",
+}
+
 export default function DashboardPortal() {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
@@ -31,30 +132,32 @@ export default function DashboardPortal() {
   const [lowStockParts, setLowStockParts] = useState<SparePart[]>([])
   const [assetTypes, setAssetTypes] = useState<AssetTypeBreakdown[]>([])
   const [recentRepairs, setRecentRepairs] = useState<Repair[]>([])
+  const [borrowRange, setBorrowRange] = useState<'1M' | '3M' | '6M' | '1Y'>('6M')
+  const [repairRange, setRepairRange] = useState<'1M' | '3M' | '6M' | '1Y'>('6M')
+  const [borrowChartData, setBorrowChartData] = useState<{ month: string; value: number }[]>([])
+  const [repairChartData, setRepairChartData] = useState<{ month: string; value: number }[]>([])
+  const [allBorrowMonths, setAllBorrowMonths] = useState<{ month: string; value: number }[]>([])
+  const [allRepairMonths, setAllRepairMonths] = useState<{ month: string; value: number }[]>([])
 
-  // ย้ายการสร้าง supabase client เข้ามาอยู่ใน useMemo หรือเช็คค่าก่อน
   const supabase = typeof window !== 'undefined' && process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
     ? createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
     : null
 
   const checkUser = async () => {
     try {
-      // 1. ตรวจสอบข้อมูลจาก localStorage (ระบบล็อคอินใหม่)
       const storedProfile = localStorage.getItem('user_profile')
 
       if (storedProfile) {
         const parsedProfile = JSON.parse(storedProfile)
         setProfile(parsedProfile)
-        setUser({ email: `${parsedProfile.emp_code}@pea.co.th` }) // จำลอง user object เพื่อให้ UI ทำงานต่อได้
+        setUser({ email: `${parsedProfile.emp_code}@pea.co.th` })
 
-        // 2. ถ้าเป็น Admin ให้ดึงข้อมูลสถิติ
         if (parsedProfile.role === 'admin') {
           fetchDashboardData()
         } else {
           setLoading(false)
         }
       } else if (supabase) {
-        // 3. ถ้าไม่มีข้อมูลในเครื่อง และมี supabase ให้ลองเช็คจาก Supabase Auth (กรณีเดิม)
         const { data: { user } } = await supabase.auth.getUser()
         if (user) {
           setUser(user)
@@ -84,30 +187,20 @@ export default function DashboardPortal() {
 
   const handleLogout = async () => {
     try {
-      // 1. ลบข้อมูลจาก localStorage
       localStorage.removeItem('user_profile')
-
-      // 2. ลบ Cookie ผ่าน API (สำหรับ Middleware)
       await fetch('/api/auth/logout', { method: 'POST' })
-
-      // 3. ออกจากระบบ Supabase (กรณีที่มีค้างไว้)
       if (supabase) {
         await supabase.auth.signOut()
       }
-
-      // 4. ดีดกลับไปหน้า Login และเคลียร์หน้าจอ
       router.push('/login')
       router.refresh()
     } catch (err) {
       console.error('Logout error:', err)
-      // เผื่อกรณี API พัง ก็สั่ง Redirect อย่างเดียว
       router.push('/login')
-      router.push('/')
     }
   }
 
   const fetchDashboardData = async () => {
-    // ... existing fetchDashboardData logic ...
     try {
       const [assetsRes, borrowsRes, repairsRes, partsRes] = await Promise.all([
         fetch('/api/assets').then((r) => r.json()),
@@ -170,6 +263,74 @@ export default function DashboardPortal() {
       setLowStockParts(lowStock)
       setAssetTypes(sortedTypes)
       setRecentRepairs(repairs.slice(0, 5))
+
+      // --- Process borrow data by month ---
+      const thaiMonths = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."]
+      const now = new Date()
+      const borrowCountByMonth: Record<string, number> = {}
+      const repairCountByMonth: Record<string, number> = {}
+
+      // Initialize last 6 months
+      for (let i = 5; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+        const key = `${d.getFullYear()}-${d.getMonth()}`
+        borrowCountByMonth[key] = 0
+        repairCountByMonth[key] = 0
+      }
+
+      // Count borrows by month (use created_at or borrow_date)
+      borrows.forEach((b: any) => {
+        const dateStr = b.created_at || b.borrow_date
+        if (!dateStr) return
+        const d = new Date(dateStr)
+        const key = `${d.getFullYear()}-${d.getMonth()}`
+        if (borrowCountByMonth[key] !== undefined) {
+          borrowCountByMonth[key]++
+        }
+      })
+
+      // Count repairs by month (try multiple date fields)
+      repairs.forEach((r: any) => {
+        const dateStr = r.created_at || r.repair_date || r.request_date || r.updated_at
+        if (!dateStr) {
+          // If no date at all, count it in current month
+          const now = new Date()
+          const key = `${now.getFullYear()}-${now.getMonth()}`
+          if (repairCountByMonth[key] !== undefined) {
+            repairCountByMonth[key]++
+          }
+          return
+        }
+        const d = new Date(dateStr)
+        if (isNaN(d.getTime())) {
+          // Invalid date, count in current month
+          const now = new Date()
+          const key = `${now.getFullYear()}-${now.getMonth()}`
+          if (repairCountByMonth[key] !== undefined) {
+            repairCountByMonth[key]++
+          }
+          return
+        }
+        const key = `${d.getFullYear()}-${d.getMonth()}`
+        if (repairCountByMonth[key] !== undefined) {
+          repairCountByMonth[key]++
+        }
+      })
+
+      // Build chart data arrays
+      const borrowMonths: { month: string; value: number }[] = []
+      const repairMonths: { month: string; value: number }[] = []
+      for (let i = 5; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+        const key = `${d.getFullYear()}-${d.getMonth()}`
+        borrowMonths.push({ month: thaiMonths[d.getMonth()], value: borrowCountByMonth[key] || 0 })
+        repairMonths.push({ month: thaiMonths[d.getMonth()], value: repairCountByMonth[key] || 0 })
+      }
+
+      setAllBorrowMonths(borrowMonths)
+      setAllRepairMonths(repairMonths)
+      setBorrowChartData(borrowMonths)
+      setRepairChartData(repairMonths)
     } catch (err) {
       console.error('Failed to fetch dashboard data:', err)
     } finally {
@@ -181,179 +342,770 @@ export default function DashboardPortal() {
     checkUser()
   }, [])
 
+  // --- Loading Screen ---
   if (loading) {
     return (
-      <main className="min-h-screen bg-slate-950 flex items-center justify-center">
+      <main className="min-h-screen flex items-center justify-center" style={{ background: COLORS.bg }}>
         <div className="text-center space-y-4">
-          <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-          <p className="text-slate-400 text-sm font-medium animate-pulse">กำลังตรวจสอบสิทธิ์การใช้งาน...</p>
+          <div
+            className="w-12 h-12 rounded-full mx-auto animate-spin"
+            style={{
+              border: "3px solid rgba(124,58,237,0.1)",
+              borderTopColor: COLORS.primary,
+            }}
+          />
+          <p className="text-sm font-medium animate-pulse" style={{ color: COLORS.muted }}>
+            กำลังตรวจสอบสิทธิ์การใช้งาน...
+          </p>
         </div>
       </main>
     )
   }
 
-  // 1. หน้าจอสำหรับคนที่ยังไม่ได้ Login
+  // --- Not Logged In ---
   if (!user) {
     return (
-      <main className="min-h-screen bg-[#0f172a] flex flex-col items-center justify-center p-6 text-center">
-        <div className="w-24 h-24 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-[2rem] flex items-center justify-center text-5xl mb-8 shadow-2xl shadow-blue-500/20">
+      <main className="min-h-screen flex flex-col items-center justify-center p-6 text-center relative overflow-hidden" style={{ background: COLORS.bg }}>
+        {/* Background decorative elements */}
+        <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0 pointer-events-none">
+          <div className="absolute top-[-5%] left-[5%] w-[30%] h-[30%] bg-purple-500/8 rounded-full blur-[100px]"></div>
+          <div className="absolute bottom-[-5%] right-[5%] w-[30%] h-[30%] bg-violet-600/8 rounded-full blur-[100px]"></div>
+          <div className="absolute top-[50%] left-[50%] -translate-x-1/2 -translate-y-1/2 w-[50%] h-[50%] bg-indigo-500/5 rounded-full blur-[150px]"></div>
+        </div>
+
+        <div className="relative z-10">
+          {/* Animated Logo */}
+          <div
+            className="w-28 h-28 rounded-[2rem] flex items-center justify-center text-6xl mb-8 shadow-2xl mx-auto animate-float"
+            style={{
+                background: `linear-gradient(135deg, ${COLORS.primary}, #6D28D9)`,
+                boxShadow: `0 20px 60px rgba(124,58,237,0.15)`,
+                animation: "float 3s ease-in-out infinite",
+            }}
+          >
+            📦
+          </div>
+          <h1
+            className="text-4xl md:text-5xl font-black tracking-tight mb-4"
+            style={{ color: COLORS.text }}
+          >
+            Asset Management Portal
+          </h1>
+          <p className="max-w-lg mb-12 leading-relaxed text-lg" style={{ color: COLORS.muted }}>
+            ระบบบริหารจัดการครุภัณฑ์และงานแจ้งซ่อมแบบครบวงจร <br />
+            กรุณาเข้าสู่ระบบเพื่อดำเนินการขอยืมอุปกรณ์ หรือแจ้งซ่อม
+          </p>
+          
+          {/* Feature Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full max-w-3xl">
+            <Link
+              href="/login"
+              className="group relative font-bold py-6 px-6 rounded-2xl shadow-lg text-center overflow-hidden transition-all duration-300 hover:-translate-y-1"
+              style={{
+                background: `linear-gradient(135deg, ${COLORS.primary}, #6D28D9)`,
+                color: "#FFFFFF",
+                boxShadow: `0 8px 30px rgba(124,58,237,0.2)`,
+              }}
+            >
+              {/* Shine effect */}
+              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                style={{
+                  background: "linear-gradient(135deg, transparent 0%, rgba(255,255,255,0.1) 50%, transparent 100%)",
+                }}
+              />
+              <div className="relative z-10">
+                <span className="block text-3xl mb-3">🔐</span>
+                <span className="block text-sm font-bold">เข้าสู่ระบบ</span>
+                <span className="block text-[10px] mt-1.5 font-normal" style={{ color: 'rgba(255,255,255,0.6)' }}>
+                  สำหรับเจ้าหน้าที่
+                </span>
+              </div>
+            </Link>
+
+            <Link
+              href="/borrows/request"
+              className="group relative font-bold py-6 px-6 rounded-2xl shadow-lg text-center overflow-hidden transition-all duration-300 hover:-translate-y-1"
+              style={{
+                background: COLORS.card,
+                border: `1px solid ${COLORS.primaryBorder}`,
+                color: COLORS.text,
+              }}
+            >
+              <div className="relative z-10">
+                <span className="block text-3xl mb-3">📦</span>
+                <span className="block text-sm font-bold">ยืมอุปกรณ์</span>
+                <span className="block text-[10px] mt-1.5 font-normal" style={{ color: COLORS.muted }}>
+                  ขอยืมอุปกรณ์
+                </span>
+              </div>
+              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                style={{ background: COLORS.primaryLight }}
+              />
+            </Link>
+
+            <Link
+              href="/repairs/request"
+              className="group relative font-bold py-6 px-6 rounded-2xl shadow-lg text-center overflow-hidden transition-all duration-300 hover:-translate-y-1"
+              style={{
+                background: COLORS.card,
+                border: `1px solid ${COLORS.primaryBorder}`,
+                color: COLORS.text,
+              }}
+            >
+              <div className="relative z-10">
+                <span className="block text-3xl mb-3">🔧</span>
+                <span className="block text-sm font-bold">แจ้งซ่อม</span>
+                <span className="block text-[10px] mt-1.5 font-normal" style={{ color: COLORS.muted }}>
+                  แจ้งอาการเสีย
+                </span>
+              </div>
+              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                style={{ background: COLORS.primaryLight }}
+              />
+            </Link>
+          </div>
+
+          {/* Footer */}
+          <p className="mt-12 text-xs" style={{ color: COLORS.muted }}>
+            พบปัญหา? ติดต่อ <span className="text-[#8b5cf6] font-medium">แผนกไอที</span>
+          </p>
+        </div>
+      </main>
+    )
+  }
+  // --- Admin Dashboard (Premium Design) ---
+  if (profile?.role === 'admin') {
+    const monthChange = stats.totalAssets > 0
+      ? ((stats.availableAssets - stats.borrowedAssets) / stats.totalAssets * 100).toFixed(1)
+      : "0"
+
+    const pieData = [
+      { name: "ว่าง", value: stats.availableAssets, color: COLORS.green },
+      { name: "ถูกยืม", value: stats.borrowedAssets, color: COLORS.blue },
+      { name: "ซ่อม", value: stats.activeRepairsCount, color: COLORS.red },
+    ].filter(d => d.value > 0)
+
+    const rangeMap: Record<string, number> = { '1M': 1, '3M': 3, '6M': 6, '1Y': 12 }
+    const getChartData = (all: { month: string; value: number }[], range: '1M' | '3M' | '6M' | '1Y') => {
+      const count = rangeMap[range]
+      if (count >= all.length) return all
+      return all.slice(-count)
+    }
+    const borrowData = getChartData(allBorrowMonths, borrowRange)
+    const repairData = getChartData(allRepairMonths, repairRange)
+    const rangeLabels: Record<string, string> = { '1M': '1 เดือน', '3M': '3 เดือน', '6M': '6 เดือน', '1Y': '1 ปี' }
+
+    return (
+      <div
+        className="flex h-screen w-full overflow-hidden"
+        style={{ fontFamily: "'DM Sans', sans-serif", background: COLORS.bg }}
+      >
+        {/* ===== SIDEBAR ===== */}
+        <aside
+          className="flex flex-col w-64 shrink-0 h-full py-8 px-5"
+          style={{
+            background: "#110e25",
+            borderRight: `1px solid ${COLORS.primaryBorder}`,
+          }}
+        >
+          <div className="mb-10 px-1">
+            <span
+              style={{
+                fontFamily: "'Playfair Display', serif",
+                fontSize: 20,
+                fontWeight: 600,
+                color: COLORS.primary,
+                letterSpacing: "-0.02em",
+              }}
+            >
+              MyAsset
+            </span>
+            <span
+              style={{
+                fontFamily: "'DM Mono', monospace",
+                fontSize: 10,
+                color: COLORS.muted,
+                display: "block",
+                letterSpacing: "0.12em",
+                marginTop: 1,
+              }}
+            >
+              PORTFOLIO MANAGER
+            </span>
+          </div>
+
+          <nav className="flex flex-col gap-1 flex-1">
+            {navItems.map((item, i) => (
+              <Link
+                key={i}
+                href={item.href}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-150"
+                style={{
+                  color: item.active ? COLORS.primary : COLORS.muted,
+                  background: item.active ? COLORS.primaryLight : "transparent",
+                  borderLeft: item.active ? `2px solid ${COLORS.primary}` : "2px solid transparent",
+                  fontWeight: item.active ? 500 : 400,
+                }}
+              >
+                <item.icon size={16} />
+                {item.label}
+              </Link>
+            ))}
+          </nav>
+
+          <div
+            className="mt-auto pt-6"
+            style={{ borderTop: `1px solid ${COLORS.primaryBorder}` }}
+          >
+            <div className="flex items-center gap-3 px-2 mb-3">
+              <div
+                className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold"
+                style={{ background: COLORS.primary, color: "#FFFFFF" }}
+              >
+                {profile?.full_name?.charAt(0) || "อ"}
+              </div>
+              <div>
+                <p className="text-xs font-medium" style={{ color: COLORS.text }}>
+                  {profile?.full_name || "ผู้ดูแลระบบ"}
+                </p>
+                <p className="text-xs" style={{ color: COLORS.muted }}>
+                  Admin
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-2 px-3 py-2 w-full rounded-lg text-xs transition-colors"
+              style={{ color: COLORS.muted }}
+            >
+              <LogOut size={13} />
+              ออกจากระบบ
+            </button>
+          </div>
+        </aside>
+
+        {/* ===== MAIN CONTENT ===== */}
+        <main className="flex-1 flex flex-col overflow-hidden">
+          <header
+            className="flex items-center justify-between px-8 py-5 shrink-0"
+            style={{ borderBottom: `1px solid ${COLORS.primaryBorder}` }}
+          >
+            <div>
+              <h1
+                style={{
+                  fontFamily: "'Playfair Display', serif",
+                  fontSize: 22,
+                  fontWeight: 600,
+                  color: COLORS.text,
+                  letterSpacing: "-0.02em",
+                }}
+              >
+                ภาพรวมสินทรัพย์
+              </h1>
+              <p className="text-xs mt-0.5" style={{ color: COLORS.muted }}>
+                อัปเดตล่าสุด: {new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })} ·{" "}
+                {new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3"></div>
+          </header>
+
+          <div className="flex-1 overflow-y-auto px-8 py-6">
+            {/* ===== HERO ===== */}
+            <div
+              className="rounded-2xl p-7 mb-6 relative overflow-hidden"
+              style={{
+                background: "linear-gradient(135deg, #7C3AED 0%, #6D28D9 50%, #5B21B6 100%)",
+                border: `1px solid ${COLORS.primaryBorder}`,
+              }}
+            >
+              <div
+                className="absolute -top-16 -right-16 w-64 h-64 rounded-full"
+                style={{
+                  background: "radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 70%)",
+                }}
+              />
+
+              <div className="flex items-start justify-between relative">
+                <div>
+                  <p
+                    className="text-xs mb-3 tracking-widest uppercase"
+                    style={{ color: "rgba(255,255,255,0.7)", fontFamily: "'DM Mono', monospace" }}
+                  >
+                    ครุภัณฑ์ทั้งหมด
+                  </p>
+                  <h2
+                    style={{
+                      fontFamily: "'Playfair Display', serif",
+                      fontSize: 42,
+                      fontWeight: 700,
+                      color: "#FFFFFF",
+                      letterSpacing: "-0.03em",
+                      lineHeight: 1,
+                    }}
+                  >
+                    {fmtNum(stats.totalAssets)}
+                    <span className="text-lg font-normal ml-2" style={{ color: "rgba(255,255,255,0.6)" }}>
+                      ชิ้น
+                    </span>
+                  </h2>
+                  <div className="flex items-center gap-2 mt-3">
+                    <span
+                      className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium"
+                      style={{ background: "rgba(255,255,255,0.12)", color: "#FFFFFF" }}
+                    >
+                      <ArrowUpRight size={12} />
+                      +{monthChange}% เดือนนี้
+                    </span>
+                    <span className="text-xs" style={{ color: "rgba(255,255,255,0.6)" }}>
+                      ว่าง {fmtNum(stats.availableAssets)} ชิ้น · ถูกยืม {fmtNum(stats.borrowedAssets)} ชิ้น
+                    </span>
+                  </div>
+                </div>
+
+                {pieData.length > 0 && (
+                  <div className="flex items-center gap-4">
+                    <PieChart width={90} height={90}>
+                      <Pie
+                        data={pieData}
+                        cx={45}
+                        cy={45}
+                        innerRadius={30}
+                        outerRadius={42}
+                        dataKey="value"
+                        strokeWidth={0}
+                      >
+                        {pieData.map((entry, i) => (
+                          <Cell key={i} fill={entry.color} />
+                        ))}
+                      </Pie>
+                    </PieChart>
+                    <div className="flex flex-col gap-1.5">
+                      {pieData.map((d) => (
+                        <div key={d.name} className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full" style={{ background: d.color }} />
+                          <span className="text-xs" style={{ color: "rgba(255,255,255,0.6)" }}>{d.name}</span>
+                          <span
+                            className="text-xs font-medium ml-auto"
+                            style={{ color: "#FFFFFF", fontFamily: "'DM Mono', monospace" }}
+                          >
+                            {d.value}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* ===== KPI CARDS ===== */}
+            <div className="grid grid-cols-4 gap-4 mb-6">
+              <div className="rounded-xl p-5" style={{ background: COLORS.card, border: `1px solid ${COLORS.cardBorder}` }}>
+                <div className="w-9 h-9 rounded-lg flex items-center justify-center mb-4" style={{ background: "rgba(16,185,129,0.08)" }}>
+                  <CheckCircle2 size={16} style={{ color: COLORS.green }} />
+                </div>
+                <p className="text-xs mb-1" style={{ color: COLORS.muted }}>พร้อมใช้งาน</p>
+                <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 20, fontWeight: 500, color: COLORS.text }}>
+                  {fmtNum(stats.availableAssets)}
+                </p>
+                <p className="text-xs mt-1" style={{ color: COLORS.green }}>
+                  {stats.totalAssets > 0 ? Math.round(stats.availableAssets / stats.totalAssets * 100) : 0}% ของทั้งหมด
+                </p>
+              </div>
+
+              <div className="rounded-xl p-5" style={{ background: COLORS.card, border: `1px solid ${COLORS.cardBorder}` }}>
+                <div className="w-9 h-9 rounded-lg flex items-center justify-center mb-4" style={{ background: "rgba(59,130,246,0.08)" }}>
+                  <RefreshCw size={16} style={{ color: COLORS.blue }} />
+                </div>
+                <p className="text-xs mb-1" style={{ color: COLORS.muted }}>กำลังถูกยืม</p>
+                <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 20, fontWeight: 500, color: COLORS.text }}>
+                  {fmtNum(stats.activeBorrowsQuantity)}
+                </p>
+                <p className="text-xs mt-1" style={{ color: COLORS.blue }}>{fmtNum(stats.activeBorrowsCount)} รายการ</p>
+              </div>
+
+              <div className="rounded-xl p-5" style={{ background: COLORS.card, border: `1px solid ${COLORS.cardBorder}` }}>
+                <div className="w-9 h-9 rounded-lg flex items-center justify-center mb-4" style={{ background: "rgba(239,68,68,0.08)" }}>
+                  <AlertTriangle size={16} style={{ color: COLORS.red }} />
+                </div>
+                <p className="text-xs mb-1" style={{ color: COLORS.muted }}>ใกล้กำหนดคืน</p>
+                <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 20, fontWeight: 500, color: COLORS.text }}>
+                  {fmtNum(stats.overdueBorrowsQuantity)}
+                </p>
+                <p className="text-xs mt-1" style={{ color: COLORS.red }}>{fmtNum(stats.overdueBorrowsCount)} รายการ</p>
+              </div>
+
+              <div className="rounded-xl p-5" style={{ background: COLORS.card, border: `1px solid ${COLORS.cardBorder}` }}>
+                <div className="w-9 h-9 rounded-lg flex items-center justify-center mb-4" style={{ background: "rgba(239,68,68,0.08)" }}>
+                  <Wrench size={16} style={{ color: COLORS.red }} />
+                </div>
+                <p className="text-xs mb-1" style={{ color: COLORS.muted }}>งานซ่อม</p>
+                <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 20, fontWeight: 500, color: COLORS.text }}>
+                  {fmtNum(stats.activeRepairsCount)}
+                </p>
+                <p className="text-xs mt-1" style={{ color: COLORS.red }}>
+                  รอ {fmtNum(stats.pendingRepairsCount)} · กำลังซ่อม {fmtNum(stats.inProgressRepairsCount)}
+                </p>
+              </div>
+            </div>
+
+            {/* ===== CURRENT MONTH STATS ===== */}
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 mb-4">
+              <div
+                className="rounded-xl p-5 flex items-center justify-between"
+                style={{ background: COLORS.card, border: `1px solid ${COLORS.cardBorder}` }}
+              >
+                <div>
+                  <p className="text-xs mb-1" style={{ color: COLORS.muted }}>📦 กำลังถูกยืม</p>
+                  <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 28, fontWeight: 600, color: COLORS.blue }}>
+                    {stats.activeBorrowsQuantity}
+                  </p>
+                  <p className="text-xs mt-1" style={{ color: COLORS.muted }}>
+                    {stats.activeBorrowsCount} รายการ · {stats.overdueBorrowsCount} รายการใกล้กำหนดคืน
+                  </p>
+                </div>
+                <div
+                  className="w-14 h-14 rounded-2xl flex items-center justify-center"
+                  style={{ background: "rgba(59,130,246,0.1)" }}
+                >
+                  <span className="text-2xl">📦</span>
+                </div>
+              </div>
+
+              <div
+                className="rounded-xl p-5 flex items-center justify-between"
+                style={{ background: COLORS.card, border: `1px solid ${COLORS.cardBorder}` }}
+              >
+                <div>
+                  <p className="text-xs mb-1" style={{ color: COLORS.muted }}>🔧 สถิติการซ่อมเดือนนี้</p>
+                  <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 28, fontWeight: 600, color: COLORS.red }}>
+                    {allRepairMonths.length > 0 ? allRepairMonths[allRepairMonths.length - 1].value : 0}
+                  </p>
+                  <p className="text-xs mt-1" style={{ color: COLORS.muted }}>
+                    {allRepairMonths.length > 0 ? allRepairMonths[allRepairMonths.length - 1].month : '-'} · {stats.pendingRepairsCount} รายการรอดำเนินการ
+                  </p>
+                </div>
+                <div
+                  className="w-14 h-14 rounded-2xl flex items-center justify-center"
+                  style={{ background: "rgba(239,68,68,0.1)" }}
+                >
+                  <span className="text-2xl">🔧</span>
+                </div>
+              </div>
+            </div>
+
+            {/* ===== TWO CHARTS: BORROW + REPAIR ===== */}
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              {/* Borrow Chart */}
+              <div
+                className="rounded-xl p-6"
+                style={{ background: COLORS.card, border: `1px solid ${COLORS.cardBorder}` }}
+              >
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 15, fontWeight: 600, color: COLORS.text }}>
+                      📦 แนวโน้มการยืม
+                    </p>
+                    <p className="text-xs mt-0.5" style={{ color: COLORS.muted }}>ย้อนหลัง 6 เดือน</p>
+                  </div>
+                  <div className="flex gap-1">
+                    {(["1M", "3M", "6M", "1Y"] as const).map((t) => (
+                      <button
+                        key={t}
+                        onClick={() => setBorrowRange(t)}
+                        className="px-2.5 py-1 rounded text-xs transition-colors cursor-pointer"
+                        style={{
+                          background: borrowRange === t ? COLORS.primaryLight : "transparent",
+                          color: borrowRange === t ? COLORS.primary : COLORS.muted,
+                          fontFamily: "'DM Mono', monospace",
+                        }}
+                      >
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <ResponsiveContainer width="100%" height={180}>
+                  <AreaChart data={borrowData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="blueGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.18} />
+                        <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(59,130,246,0.06)" vertical={false} />
+                    <XAxis dataKey="month" tick={{ fill: COLORS.muted, fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <YAxis
+                      tickFormatter={(v) => fmtNum(v)}
+                      tick={{ fill: COLORS.muted, fontSize: 10, fontFamily: "'DM Mono', monospace" }}
+                      axisLine={false}
+                      tickLine={false}
+                      width={44}
+                    />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Area
+                      type="monotone"
+                      dataKey="value"
+                      stroke="#3B82F6"
+                      strokeWidth={1.5}
+                      fill="url(#blueGrad)"
+                      dot={false}
+                      activeDot={{ r: 4, fill: "#3B82F6", stroke: COLORS.card, strokeWidth: 2 }}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+
+              {/* Repair Chart */}
+              <div
+                className="rounded-xl p-6"
+                style={{ background: COLORS.card, border: `1px solid ${COLORS.cardBorder}` }}
+              >
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 15, fontWeight: 600, color: COLORS.text }}>
+                      🔧 แนวโน้มการซ่อม
+                    </p>
+                    <p className="text-xs mt-0.5" style={{ color: COLORS.muted }}>ย้อนหลัง 6 เดือน</p>
+                  </div>
+                  <div className="flex gap-1">
+                    {(["1M", "3M", "6M", "1Y"] as const).map((t) => (
+                      <button
+                        key={t}
+                        onClick={() => setRepairRange(t)}
+                        className="px-2.5 py-1 rounded text-xs transition-colors cursor-pointer"
+                        style={{
+                          background: repairRange === t ? COLORS.primaryLight : "transparent",
+                          color: repairRange === t ? COLORS.primary : COLORS.muted,
+                          fontFamily: "'DM Mono', monospace",
+                        }}
+                      >
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <ResponsiveContainer width="100%" height={180}>
+                  <AreaChart data={repairData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="redGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#EF4444" stopOpacity={0.18} />
+                        <stop offset="95%" stopColor="#EF4444" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(239,68,68,0.06)" vertical={false} />
+                    <XAxis dataKey="month" tick={{ fill: COLORS.muted, fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <YAxis
+                      tickFormatter={(v) => fmtNum(v)}
+                      tick={{ fill: COLORS.muted, fontSize: 10, fontFamily: "'DM Mono', monospace" }}
+                      axisLine={false}
+                      tickLine={false}
+                      width={44}
+                    />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Area
+                      type="monotone"
+                      dataKey="value"
+                      stroke="#EF4444"
+                      strokeWidth={1.5}
+                      fill="url(#redGrad)"
+                      dot={false}
+                      activeDot={{ r: 4, fill: "#EF4444", stroke: COLORS.card, strokeWidth: 2 }}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* ===== TWO RECENT ACTIVITY SECTIONS ===== */}
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 mt-4">
+              {/* Recent Borrows */}
+              <div
+                className="rounded-xl p-6"
+                style={{ background: COLORS.card, border: `1px solid ${COLORS.cardBorder}` }}
+              >
+                <div className="flex items-center justify-between mb-5">
+                  <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 15, fontWeight: 600, color: COLORS.text }}>
+                    📦 รายการยืมล่าสุด
+                  </p>
+                  <Link href="/borrows" className="flex items-center gap-1 text-xs transition-colors" style={{ color: COLORS.primary }}>
+                    ดูทั้งหมด <ChevronRight size={12} />
+                  </Link>
+                </div>
+
+                <div className="flex flex-col gap-0">
+                  {urgentReturns.length === 0 ? (
+                    <p className="text-xs py-4 text-center" style={{ color: COLORS.muted }}>ไม่มีรายการยืมล่าสุด</p>
+                  ) : (
+                    urgentReturns.slice(0, 4).map((b, i) => (
+                      <div
+                        key={b.id || `urgent-${i}`}
+                        className="flex items-center justify-between py-3"
+                        style={{
+                          borderBottom: i < Math.min(urgentReturns.length, 4) - 1
+                            ? `1px solid ${COLORS.primaryBorder}`
+                            : "none",
+                        }}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: `${COLORS.red}15` }}>
+                            <span className="w-2 h-2 rounded-full" style={{ background: COLORS.red }} />
+                          </div>
+                          <div>
+                            <p className="text-xs font-medium" style={{ color: COLORS.text }}>
+                              {b.assets?.name || `คืนครุภัณฑ์ #${b.id}`}
+                            </p>
+                            <p className="text-xs" style={{ color: COLORS.muted }}>
+                              {b.due_date ? `ถึงกำหนด: ${new Date(b.due_date).toLocaleDateString('th-TH')}` : 'ใกล้กำหนดคืน'}
+                            </p>
+                          </div>
+                        </div>
+                        <span className="text-xs font-medium" style={{ fontFamily: "'DM Mono', monospace", color: COLORS.red }}>
+                          {b.quantity || 1}x
+                        </span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* Recent Repairs */}
+              <div
+                className="rounded-xl p-6"
+                style={{ background: COLORS.card, border: `1px solid ${COLORS.cardBorder}` }}
+              >
+                <div className="flex items-center justify-between mb-5">
+                  <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 15, fontWeight: 600, color: COLORS.text }}>
+                    🔧 รายการซ่อมล่าสุด
+                  </p>
+                  <Link href="/repairs" className="flex items-center gap-1 text-xs transition-colors" style={{ color: COLORS.primary }}>
+                    ดูทั้งหมด <ChevronRight size={12} />
+                  </Link>
+                </div>
+
+                <div className="flex flex-col gap-0">
+                  {recentRepairs.length === 0 ? (
+                    <p className="text-xs py-4 text-center" style={{ color: COLORS.muted }}>ไม่มีรายการซ่อมล่าสุด</p>
+                  ) : (
+                    recentRepairs.slice(0, 4).map((r, i) => (
+                      <div
+                        key={r.id || `repair-${i}`}
+                        className="flex items-center justify-between py-3"
+                        style={{
+                          borderBottom: i < Math.min(recentRepairs.length, 4) - 1
+                            ? `1px solid ${COLORS.primaryBorder}`
+                            : "none",
+                        }}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: `${COLORS.primary}15` }}>
+                            <span className="w-2 h-2 rounded-full" style={{ background: COLORS.primary }} />
+                          </div>
+                          <div>
+                            <p className="text-xs font-medium" style={{ color: COLORS.text }}>
+                              {r.item?.assets_number || `แจ้งซ่อม #${r.id}`}
+                            </p>
+                            <p className="text-xs" style={{ color: COLORS.muted }}>
+                              {r.status === 'Pending' ? 'รอดำเนินการ' : r.status === 'In Progress' ? 'กำลังซ่อม' : r.status}
+                            </p>
+                          </div>
+                        </div>
+                        <span className="text-xs font-medium" style={{ fontFamily: "'DM Mono', monospace", color: COLORS.primary }}>
+                          {r.status === 'Pending' ? 'รอดำเนินการ' : 'กำลังซ่อม'}
+                        </span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    )
+  }
+
+  // --- User Dashboard (Simplified) ---
+  return (
+    <main className="min-h-screen flex flex-col items-center justify-center p-6 text-center relative overflow-hidden" style={{ background: COLORS.bg }}>
+      {/* Background decorative elements */}
+      <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0 pointer-events-none">
+        <div className="absolute top-[-5%] left-[5%] w-[30%] h-[30%] bg-purple-500/8 rounded-full blur-[100px]"></div>
+        <div className="absolute bottom-[-5%] right-[5%] w-[30%] h-[30%] bg-violet-600/8 rounded-full blur-[100px]"></div>
+      </div>
+
+      <div className="relative z-10">
+        <div
+          className="w-24 h-24 rounded-[2rem] flex items-center justify-center text-5xl mb-8 shadow-2xl mx-auto"
+          style={{
+            background: `linear-gradient(135deg, ${COLORS.primary}, #6D28D9)`,
+            boxShadow: `0 20px 60px rgba(124,58,237,0.15)`,
+          }}
+        >
           📦
         </div>
-        <h1 className="text-4xl md:text-5xl font-black text-white tracking-tight mb-4">
-          Asset Management Portal
+        <h1
+          className="text-4xl md:text-5xl font-black tracking-tight mb-2"
+          style={{ color: COLORS.text }}
+        >
+          ยินดีต้อนรับ
         </h1>
-        <p className="text-slate-400 max-w-lg mb-10 leading-relaxed text-lg">
-          ระบบบริหารจัดการครุภัณฑ์และงานแจ้งซ่อมแบบครบวงจร <br />
-          กรุณาเข้าสู่ระบบเพื่อดำเนินการขอยืมอุปกรณ์ หรือแจ้งซ่อม
+        <p className="max-w-lg mb-10 leading-relaxed text-lg" style={{ color: COLORS.muted }}>
+          {profile?.full_name || "ผู้ใช้งาน"} · {profile?.department || "ระบบ"}
         </p>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full max-w-2xl">
-          <Link
-            href="/login"
-            className="group relative bg-gradient-to-br from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white font-bold py-4 px-6 rounded-2xl shadow-lg shadow-blue-500/20 transition-all duration-200 text-center overflow-hidden"
-          >
-            <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-            <span className="relative z-10 block text-sm">🔐 เข้าสู่ระบบ</span>
-            <span className="relative z-10 block text-[10px] text-blue-200 mt-0.5">สำหรับเจ้าหน้าที่</span>
-          </Link>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-lg">
           <Link
             href="/borrows/request"
-            className="group relative bg-gradient-to-br from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white font-bold py-4 px-6 rounded-2xl shadow-lg shadow-indigo-500/20 transition-all duration-200 text-center overflow-hidden"
+            className="group relative font-bold py-6 px-6 rounded-2xl shadow-lg text-center overflow-hidden transition-all duration-300 hover:-translate-y-1"
+            style={{
+              background: `linear-gradient(135deg, ${COLORS.primary}, #6D28D9)`,
+              color: "#FFFFFF",
+              boxShadow: `0 8px 30px rgba(124,58,237,0.2)`,
+            }}
           >
-            <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-            <span className="relative z-10 block text-sm">📦 ยืมอุปกรณ์</span>
-            <span className="relative z-10 block text-[10px] text-indigo-200 mt-0.5">ขอยืมอุปกรณ์</span>
+            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+              style={{
+                background: "linear-gradient(135deg, transparent 0%, rgba(255,255,255,0.1) 50%, transparent 100%)",
+              }}
+            />
+            <div className="relative z-10">
+              <span className="block text-3xl mb-2">📦</span>
+              <span className="block text-sm font-bold">ขอยืมอุปกรณ์</span>
+            </div>
           </Link>
           <Link
             href="/repairs/request"
-            className="group relative bg-gradient-to-br from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white font-bold py-4 px-6 rounded-2xl shadow-lg shadow-emerald-500/20 transition-all duration-200 text-center overflow-hidden"
+            className="group relative font-bold py-6 px-6 rounded-2xl shadow-lg text-center overflow-hidden transition-all duration-300 hover:-translate-y-1"
+            style={{
+              background: COLORS.card,
+              border: `1px solid ${COLORS.primaryBorder}`,
+              color: COLORS.text,
+            }}
           >
-            <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-            <span className="relative z-10 block text-sm">🔧 แจ้งซ่อม</span>
-            <span className="relative z-10 block text-[10px] text-emerald-200 mt-0.5">แจ้งอาการเสีย</span>
+            <div className="relative z-10">
+              <span className="block text-3xl mb-2">🔧</span>
+              <span className="block text-sm font-bold">แจ้งซ่อม</span>
+            </div>
+            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+              style={{ background: COLORS.primaryLight }}
+            />
           </Link>
         </div>
-        
-      </main>
-    )
-  }
-
-  // 2. หน้าจอสำหรับ Admin (แสดง Dashboard เต็มรูปแบบ)
-  if (profile?.role === 'admin') {
-    return (
-      <main className="min-h-screen bg-slate-950 text-slate-100 p-6 md:p-10 font-sans">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-          <div>
-            <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent">
-              Admin  Dashboard
-            </h1>
-
-          </div>
-          <div className="flex items-center gap-3">
-            <button onClick={handleLogout} className="bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 px-4 py-2 rounded-xl text-xs font-bold transition-all">
-              ออกจากระบบ 🚪
-            </button>
-            <div className="bg-slate-900 border border-slate-800 rounded-xl px-4 py-2 text-xs font-mono text-slate-300">
-              🕒 {new Date().toLocaleTimeString('th-TH')}
-            </div>
-          </div>
-        </div>
-
-        <div className="max-w-7xl mx-auto space-y-8">
-          {/* Row 1: KPI Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 shadow-xl backdrop-blur-md">
-              <div className="flex justify-between mb-4"><span className="text-[10px] font-bold text-slate-500 tracking-wider">ครุภัณฑ์ทั้งหมด</span><span>📦</span></div>
-              <div className="text-3xl font-black text-white">{stats.totalAssets} <span className="text-sm font-medium text-slate-500">ชิ้น</span></div>
-              <div className="mt-4 flex justify-between text-xs border-t border-slate-800 pt-3">
-                <span className="text-emerald-400">ว่าง: {stats.availableAssets}</span>
-                <span className="text-indigo-400">ถูกยืม: {stats.borrowedAssets}</span>
-              </div>
-            </div>
-            <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 shadow-xl backdrop-blur-md">
-              <div className="flex justify-between mb-4"><span className="text-[10px] font-bold text-slate-500 tracking-wider">กำลังถูกยืม</span><span>🤝</span></div>
-              <div className="text-3xl font-black text-white">{stats.activeBorrowsQuantity} <span className="text-sm font-medium text-slate-500">ชิ้น</span></div>
-              <div className="mt-4 flex justify-between text-xs border-t border-slate-800 pt-3">
-                <span className="text-slate-400">{stats.activeBorrowsCount} รายการ</span>
-                {stats.overdueBorrowsCount > 0 && <span className="text-red-400 font-bold animate-pulse">🚨 เลยกำหนด: {stats.overdueBorrowsCount}</span>}
-              </div>
-            </div>
-            <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 shadow-xl backdrop-blur-md">
-              <div className="flex justify-between mb-4"><span className="text-[10px] font-bold text-slate-500 tracking-wider">งานซ่อมปัจจุบัน</span><span>🛠️</span></div>
-              <div className="text-3xl font-black text-white">{stats.activeRepairsCount} <span className="text-sm font-medium text-slate-500">เคส</span></div>
-              <div className="mt-4 flex justify-between text-xs border-t border-slate-800 pt-3">
-                <span className="text-amber-400">รอ: {stats.pendingRepairsCount}</span>
-                <span className="text-blue-400">ซ่อม: {stats.inProgressRepairsCount}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Navigation Menu for Admin */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-8">
-            <Link href="/borrows" className="p-6 bg-slate-900 border border-slate-800 rounded-2xl hover:border-blue-500/50 transition-all group">
-              <div className="w-10 h-10 bg-blue-500/10 rounded-xl flex items-center justify-center text-xl mb-4 group-hover:bg-blue-600 group-hover:text-white transition-all">📂</div>
-              <h4 className="font-bold text-white mb-2">จัดการครุภัณฑ์ & ยืมคืน</h4>
-              <p className="text-slate-500 text-[11px] leading-relaxed">ทะเบียนอุปกรณ์ทั้งหมด ตรวจสอบการยืม และจัดการคืนของ</p>
-            </Link>
-            <Link href="/repairs" className="p-6 bg-slate-900 border border-slate-800 rounded-2xl hover:border-purple-500/50 transition-all group">
-              <div className="w-10 h-10 bg-purple-500/10 rounded-xl flex items-center justify-center text-xl mb-4 group-hover:bg-purple-600 group-hover:text-white transition-all">⚙️</div>
-              <h4 className="font-bold text-white mb-2">จัดการงานซ่อม & อะไหล่</h4>
-              <p className="text-slate-500 text-[11px] leading-relaxed">ควบคุมคิวงานแจ้งซ่อม จัดการสต็อกอะไหล่ และบันทึกค่าใช้จ่าย</p>
-            </Link>
-            <Link href="/" className="p-6 bg-slate-900 border border-slate-800 rounded-2xl hover:border-indigo-500/50 transition-all group">
-              <div className="w-10 h-10 bg-indigo-500/10 rounded-xl flex items-center justify-center text-xl mb-4 group-hover:bg-indigo-600 group-hover:text-white transition-all">?</div>
-              <h4 className="font-bold text-white mb-2">เมนูในอนาคต</h4>
-              <p className="text-slate-500 text-[11px] leading-relaxed">ยังไม่มีกำหนดพัฒนา</p>
-            </Link>
-            <Link href="/" className="p-6 bg-slate-900 border border-slate-800 rounded-2xl hover:border-indigo-500/50 transition-all group">
-              <div className="w-10 h-10 bg-indigo-500/10 rounded-xl flex items-center justify-center text-xl mb-4 group-hover:bg-indigo-600 group-hover:text-white transition-all">?</div>
-              <h4 className="font-bold text-white mb-2">เมนูในอนาคต</h4>
-              <p className="text-slate-500 text-[11px] leading-relaxed">ยังไม่มีกำหนดพัฒนา</p>
-            </Link>
-          </div>
-        </div>
-      </main>
-    )
-  }
-
-  // 3. หน้าจอสำหรับ User ทั่วไป (Simplified Menu)
-  return (
-    <main className="min-h-screen bg-slate-950 text-slate-100 p-6 md:p-12">
-      <div className="max-w-4xl mx-auto">
-        <div className="flex justify-between items-center mb-12">
-          <div>
-            <h1 className="text-3xl font-black text-white mb-2">Service Portal</h1>
-            <p className="text-slate-400">ยินดีต้อนรับคุณ {user.email}</p>
-          </div>
-          <button onClick={handleLogout} className="bg-slate-900 text-slate-400 hover:text-white px-4 py-2 rounded-xl text-xs font-bold border border-slate-800 transition-all">
-            ออกจากระบบ 🚪
-          </button>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <Link href="/borrows/request" className="group p-10 bg-gradient-to-br from-slate-900 to-slate-800 border border-slate-800 rounded-[2.5rem] hover:border-indigo-500/50 transition-all shadow-2xl relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-8 text-6xl opacity-10 group-hover:opacity-20 transition-opacity">🛒</div>
-            <div className="w-14 h-14 bg-indigo-600 text-white rounded-2xl flex items-center justify-center text-2xl mb-6 shadow-lg shadow-indigo-500/20">🤝</div>
-            <h3 className="text-2xl font-bold mb-4">ขอยืมอุปกรณ์คอมพิวเตอร์</h3>
-            <p className="text-slate-400 leading-relaxed">เบิกยืม Notebook, Monitor หรืออุปกรณ์อื่นๆ เพื่อใช้ในการปฏิบัติงาน</p>
-          </Link>
-
-          <Link href="/repairs/request" className="group p-10 bg-gradient-to-br from-slate-900 to-slate-800 border border-slate-800 rounded-[2.5rem] hover:border-emerald-500/50 transition-all shadow-2xl relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-8 text-6xl opacity-10 group-hover:opacity-20 transition-opacity">🔧</div>
-            <div className="w-14 h-14 bg-emerald-600 text-white rounded-2xl flex items-center justify-center text-2xl mb-6 shadow-lg shadow-emerald-500/20">🛠️</div>
-            <h3 className="text-2xl font-bold mb-4">แจ้งซ่อมอุปกรณ์เสีย</h3>
-            <p className="text-slate-400 leading-relaxed">แจ้งอาการเสียของคอมพิวเตอร์หรืออุปกรณ์ต่างๆ เพื่อให้ช่างตรวจสอบแก้ไข</p>
-          </Link>
-        </div>
-
-        <div className="mt-12 bg-slate-900/40 border border-slate-800 p-8 rounded-[2rem] text-center">
-          <h4 className="font-bold text-slate-300 mb-2">ตรวจสอบสถานะรายการของคุณ</h4>
-          <p className="text-slate-500 text-sm mb-6">คุณสามารถดูรายการที่คุณเคยแจ้งซ่อมหรือยืมอุปกรณ์ไว้ได้ที่นี่</p>
-          <div className="flex justify-center gap-4">
-            <Link href="/repairs" className="text-xs font-bold text-indigo-400 hover:underline">ประวัติการแจ้งซ่อม</Link>
-            <span className="text-slate-700">|</span>
-            <Link href="/borrows" className="text-xs font-bold text-indigo-400 hover:underline">ประวัติการยืม-คืน</Link>
-          </div>
-        </div>
+        <button
+          onClick={handleLogout}
+          className="mt-10 text-sm px-6 py-3 rounded-xl transition-all hover:-translate-y-0.5"
+          style={{ 
+            color: COLORS.muted, 
+            border: `1px solid ${COLORS.primaryBorder}`,
+            background: COLORS.card,
+          }}
+        >
+          ออกจากระบบ
+        </button>
       </div>
     </main>
   )
