@@ -98,8 +98,8 @@ export default function DocumentUploader({ borrowId, onUploadSuccess }: Uploader
     <div className="flex items-center">
       <label className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-all border
         ${uploading 
-          ? "bg-slate-700 text-slate-400 border-slate-600 cursor-not-allowed" 
-          : "bg-slate-800 text-slate-200 border-slate-700 hover:bg-slate-700 hover:text-white"
+          ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed" 
+          : "bg-[#7c3aed] text-white border-[#7c3aed] hover:bg-[#6d28d9]"
         }`}
       >
         <span>{uploading ? "กำลังอัปโหลด..." : "📁 อัปโหลดเอกสารย้อนหลัง"}</span>

@@ -92,20 +92,20 @@ const navItems = [
   { icon: Wrench, label: "งานซ่อม", href: "/repairs" },
 ]
 
-// --- Color Palette (Dark Purple Theme via CSS Variables) ---
+// --- Color Palette (White-Purple Theme via CSS Variables) ---
 const COLORS = {
-  primary: "#8b5cf6",
-  primaryLight: "rgba(139,92,246,0.12)",
-  primaryBorder: "rgba(139,92,246,0.18)",
-  bg: "#0d0b1a",
-  card: "#15112b",
-  cardBorder: "rgba(139,92,246,0.18)",
-  text: "#ece9f8",
-  muted: "#9585c4",
-  green: "#34d399",
+  primary: "#7c3aed",
+  primaryLight: "rgba(124,58,237,0.10)",
+  primaryBorder: "rgba(124,58,237,0.15)",
+  bg: "#f8f7ff",
+  card: "#ffffff",
+  cardBorder: "rgba(124,58,237,0.12)",
+  text: "#2d2b3a",
+  muted: "#6b6580",
+  green: "#10b981",
   red: "#ef4444",
-  blue: "#60a5fa",
-  purple: "#8b5cf6",
+  blue: "#3b82f6",
+  purple: "#7c3aed",
   indigo: "#6366F1",
 }
 

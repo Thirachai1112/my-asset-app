@@ -36,7 +36,7 @@ export default function RootLayout({
   return (
     <html
       lang="th"
-      className={`${dmSans.variable} ${dmMono.variable} ${playfairDisplay.variable} ${notoSansThai.variable} dark h-full antialiased`}
+      className={`${dmSans.variable} ${dmMono.variable} ${playfairDisplay.variable} ${notoSansThai.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">{children}</body>
     </html>

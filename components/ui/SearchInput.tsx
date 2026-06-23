@@ -25,7 +25,7 @@ export default function SearchInput({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full bg-slate-50 border border-slate-200 hover:border-slate-300 focus:border-blue-500 rounded-xl pl-9 pr-4 py-2 text-sm focus:outline-none transition-colors text-slate-800"
+        className="w-full bg-[#f8f7ff] border border-[rgba(124,58,237,0.15)] hover:border-[rgba(124,58,237,0.3)] focus:border-[#7c3aed] rounded-xl pl-9 pr-4 py-2 text-sm focus:outline-none transition-colors text-[#2d2b3a]"
       />
       {value && (
         <button

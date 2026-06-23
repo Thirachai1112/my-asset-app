@@ -71,7 +71,7 @@ export default function LoginPage() {
   
 
   return (
-    <main className="min-h-screen bg-[#0d0b1a] flex items-center justify-center p-4 relative overflow-hidden font-sans">
+    <main className="min-h-screen bg-[#f8f7ff] flex items-center justify-center p-4 relative overflow-hidden font-sans">
       {/* Background Decor - Purple Theme */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0">
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-purple-500/10 rounded-full blur-[120px]"></div>
@@ -79,26 +79,26 @@ export default function LoginPage() {
         <div className="absolute top-[40%] right-[20%] w-[20%] h-[20%] bg-indigo-500/8 rounded-full blur-[100px]"></div>
       </div>
 
-      <div className="w-full max-w-md bg-[#15112b]/60 backdrop-blur-xl border border-[rgba(139,92,246,0.18)] rounded-[2.5rem] p-8 md:p-10 shadow-2xl relative z-10">
+      <div className="w-full max-w-md bg-white/80 backdrop-blur-xl border border-[rgba(124,58,237,0.15)] rounded-[2.5rem] p-8 md:p-10 shadow-2xl relative z-10">
         <div className="text-center mb-10">
           {/* Logo Icon */}
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#8b5cf6] to-[#6D28D9] flex items-center justify-center text-3xl mx-auto mb-5 shadow-lg shadow-purple-500/20">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#7c3aed] to-[#6D28D9] flex items-center justify-center text-3xl mx-auto mb-5 shadow-lg shadow-purple-500/20">
             📦
           </div>
-          <h1 className="text-3xl font-black text-white tracking-tight mb-1">
+          <h1 className="text-3xl font-black text-[#2d2b3a] tracking-tight mb-1">
             IT Asset
           </h1>
-          <p className="text-sm text-[#9585c4]">ระบบบริหารจัดการครุภัณฑ์</p>
+          <p className="text-sm text-[#6b6580]">ระบบบริหารจัดการครุภัณฑ์</p>
         </div>
 
         <form onSubmit={handleLogin} className="space-y-5">
           <div className="space-y-2">
-            <label className="text-[10px] font-bold text-[#9585c4] uppercase tracking-widest ml-1">
+            <label className="text-[10px] font-bold text-[#6b6580] uppercase tracking-widest ml-1">
               รหัสพนักงาน
             </label>
             <div className="relative group">
               <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
-                <svg className="w-4 h-4 text-[#9585c4]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 text-[#6b6580]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
               </div>
@@ -107,19 +107,19 @@ export default function LoginPage() {
                 value={empCode}
                 onChange={(e) => setEmpCode(e.target.value)}
                 placeholder="EMP001"
-                className="w-full bg-[#1e1840]/50 border border-[rgba(139,92,246,0.18)] text-white text-sm rounded-2xl block pl-11 p-3.5 focus:ring-2 focus:ring-purple-500/20 focus:border-[#8b5cf6] outline-none transition-all font-mono"
+                className="w-full bg-[#f8f7ff] border border-[rgba(124,58,237,0.15)] text-[#2d2b3a] text-sm rounded-2xl block pl-11 p-3.5 focus:ring-2 focus:ring-purple-500/20 focus:border-[#7c3aed] outline-none transition-all font-mono"
                 required
               />
             </div>
           </div>
 
           <div className="space-y-2">
-            <label className="text-[10px] font-bold text-[#9585c4] uppercase tracking-widest ml-1">
+            <label className="text-[10px] font-bold text-[#6b6580] uppercase tracking-widest ml-1">
               รหัสผ่าน
             </label>
             <div className="relative group">
               <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
-                <svg className="w-4 h-4 text-[#9585c4]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 text-[#6b6580]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                 </svg>
               </div>
@@ -128,7 +128,7 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full bg-[#1e1840]/50 border border-[rgba(139,92,246,0.18)] text-white text-sm rounded-2xl block pl-11 p-3.5 focus:ring-2 focus:ring-purple-500/20 focus:border-[#8b5cf6] outline-none transition-all"
+                className="w-full bg-[#f8f7ff] border border-[rgba(124,58,237,0.15)] text-[#2d2b3a] text-sm rounded-2xl block pl-11 p-3.5 focus:ring-2 focus:ring-purple-500/20 focus:border-[#7c3aed] outline-none transition-all"
                 required
               />
             </div>
@@ -137,7 +137,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-gradient-to-r from-[#8b5cf6] to-[#6D28D9] hover:from-[#7c3aed] hover:to-[#5b21b6] text-white font-bold py-4 rounded-2xl shadow-lg shadow-purple-500/20 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed mt-2"
+            className="w-full bg-gradient-to-r from-[#7c3aed] to-[#6D28D9] hover:from-[#6d28d9] hover:to-[#5b21b6] text-white font-bold py-4 rounded-2xl shadow-lg shadow-purple-500/20 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed mt-2"
           >
             {loading ? (
               <span className="flex items-center justify-center gap-2">
@@ -150,15 +150,15 @@ export default function LoginPage() {
           <button
             type="button"
             onClick={() => router.push('/')}
-            className="w-full bg-[#1e1840]/50 hover:bg-[#2a1f50] text-[#9585c4] hover:text-white font-bold py-4 rounded-2xl transition-all active:scale-[0.98] border border-[rgba(139,92,246,0.12)]"
+            className="w-full bg-[#f8f7ff] hover:bg-[#ede9fe] text-[#6b6580] hover:text-[#7c3aed] font-bold py-4 rounded-2xl transition-all active:scale-[0.98] border border-[rgba(124,58,237,0.12)]"
           >
             ← กลับหน้าหลัก
           </button>
         </form>
 
-        <div className="mt-8 text-center border-t border-[rgba(139,92,246,0.12)] pt-6">
-          <p className="text-[#9585c4] text-xs">
-            พบปัญหาการเข้าใช้งาน? ติดต่อ <span className="text-[#8b5cf6] font-bold cursor-pointer hover:underline">แผนกไอที</span>
+        <div className="mt-8 text-center border-t border-[rgba(124,58,237,0.12)] pt-6">
+          <p className="text-[#6b6580] text-xs">
+            พบปัญหาการเข้าใช้งาน? ติดต่อ <span className="text-[#7c3aed] font-bold cursor-pointer hover:underline">แผนกไอที</span>
           </p>
         </div>
       </div>

@@ -38,7 +38,7 @@ export default function Modal({
 
   return (
     <div
-      className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-[9999] p-4"
+      className="fixed inset-0 bg-[#2d2b3a]/30 backdrop-blur-sm flex items-center justify-center z-[9999] p-4"
       onClick={(e) => {
         if (e.target === e.currentTarget) {
           onClose()
