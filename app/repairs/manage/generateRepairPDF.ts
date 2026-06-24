@@ -243,7 +243,7 @@ export const generateRepairPDF = async (repair: RepairData) => {
     const positionText = repair.requester_position || "-";
     const empCodeText = repair.requester_emp_code ? `  รหัสพนักงาน ${repair.requester_emp_code}` : "";
 
-    doc.text(`ชื่อ-สกุล   ${repair.requester_name}`, 145, reqY);
+    doc.text(`ชื่อ-สกุล   ${repair.requester_name}`, 130, reqY);
     doc.text(`ตำแหน่ง    ${positionText}${empCodeText}`, 130, reqY + 6);
     doc.text(`เบอร์โทรติดต่อกลับ   ${repair.requester_phone || "-"}`, 130, reqY + 12);
 
