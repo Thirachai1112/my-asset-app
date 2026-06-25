@@ -78,7 +78,7 @@ export async function proxy(request: NextRequest) {
 
   // 1. ถ้าไม่ได้ Login และพยายามเข้าหน้าอื่นๆ (ยกเว้นหน้าแรก / และหน้า /login)
   if (!isLoggedIn && path !== '/' && !path.startsWith('/login') && !path.startsWith('/repairs/request') && !path.startsWith('/borrows/request')) {
-    return NextResponse.redirect(new URL('/login', request.url))
+    //return NextResponse.redirect(new URL('/login', request.url))
   }
 
   // 2. ลบส่วนที่ Redirect ออกจากหน้า Login เพื่อลดความซับซ้อนและป้องกัน Loop

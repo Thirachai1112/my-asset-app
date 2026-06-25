@@ -282,7 +282,7 @@ export default function RepairManageTable() {
                       <option value="">-- เลือกอะไหล่ --</option>
                       {parts.map(p => (
                         <option key={p.id} value={p.id} disabled={p.stock_quantity <= 0}>
-                          {p.part_name} (คงเหลือ: {p.stock_quantity})
+                          {p.part_name} | S/N {p.part_serial_number} | (คงเหลือ: {p.stock_quantity})
                         </option>
                       ))}
                     </select>

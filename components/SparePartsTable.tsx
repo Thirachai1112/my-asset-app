@@ -117,14 +117,26 @@ export default function SparePartsTable() {
     }
   }
 
-  const filteredParts = parts.filter(p =>
-    p.part_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.part_brand?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.part_serial_number?.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+ // ในไฟล์ SparePartsTable.tsx
+const filteredParts = parts.filter(p => {
+  const searchLower = searchTerm.toLowerCase();
+  
+  // 1. เงื่อนไขการค้นหา
+  const matchesSearch = 
+    p.part_name.toLowerCase().includes(searchLower) ||
+    p.part_brand?.toLowerCase().includes(searchLower) ||
+    p.part_serial_number?.toLowerCase().includes(searchLower);
+  
+  // 2. เงื่อนไขการซ่อนอะไหล่ที่หมดสต็อก
+  const isAvailable = p.stock_quantity > 0;
 
+  return matchesSearch && isAvailable;
+});
+
+// ลบบรรทัด const isAvailable = p.stock_quantity > 0; ที่อยู่นอก filter ออกให้หมด
+  
   if (loading) return <div className="p-12 text-center text-slate-400 animate-pulse">กำลังโหลดคลังอะไหล่...</div>
-
+  
   return (
     <div className="p-6">
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
