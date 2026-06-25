@@ -106,8 +106,9 @@ export default function RepairManageTable() {
 
     const validPartsUsage = partsUsage.filter(p => p.part_id !== '')
 
+    // 🔒 ป้องกันการบันทึกเมื่อมีการเบิกอะไหล่แต่สถานะไม่ใช่ "Completed"
     if (validPartsUsage.length > 0 && status !== 'Completed') {
-      showWarning('ไม่สามารถบันทึกได้', 'หากมีการเบิกใช้อะไหล่ กรุณาเปลี่ยนสถานะงานเป็น "เสร็จสิ้น" เพื่อตัดสต็อกและปิดงานครับ')
+      await showWarning('ไม่สามารถบันทึกได้', 'หากมีการเบิกใช้อะไหล่ กรุณาเปลี่ยนสถานะงานเป็น "เสร็จสิ้น" เพื่อตัดสต็อกและปิดงานครับ')
       return
     }
 
@@ -131,14 +132,14 @@ export default function RepairManageTable() {
       const json = await res.json()
       if (json.success) {
         setIsModalOpen(false)
-        showSuccess('อัปเดตงานซ่อมเรียบร้อย')
+        await showSuccess('อัปเดตงานซ่อมเรียบร้อย')
         fetchRepairs()
         fetchParts()
       } else {
-        showError('เกิดข้อผิดพลาด', json.error)
+        await showError('เกิดข้อผิดพลาด', json.error)
       }
     } catch (err) {
-      showError('เกิดข้อผิดพลาด', 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้')
+      await showError('เกิดข้อผิดพลาด', 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้')
     }
   }
 
@@ -280,11 +281,16 @@ export default function RepairManageTable() {
                       className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:border-emerald-500 outline-none"
                     >
                       <option value="">-- เลือกอะไหล่ --</option>
-                      {parts.map(p => (
-                        <option key={p.id} value={p.id} disabled={p.stock_quantity <= 0}>
+                      {parts
+                        .filter(p => p.stock_quantity > 0)
+                        .map(p => (
+                        <option key={p.id} value={p.id}>
                           {p.part_name} | S/N {p.part_serial_number} | (คงเหลือ: {p.stock_quantity})
                         </option>
                       ))}
+                      {parts.filter(p => p.stock_quantity <= 0).length > 0 && (
+                        <option value="" disabled className="text-slate-300 italic">─── อะไหล่หมดสต็อก ───</option>
+                      )}
                     </select>
                     <input
                       type="number"

@@ -88,7 +88,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 // --- Navigation Items ---
 const navItems = [
   { icon: LayoutDashboard, label: "ภาพรวม", href: "/", active: true },
-  { icon: Package, label: "ครุภัณฑ์", href: "/borrows" },
+  { icon: Package, label: "ทรัพย์สิน", href: "/borrows" },
   { icon: Wrench, label: "งานซ่อม", href: "/repairs" },
 ]
 
@@ -392,7 +392,7 @@ export default function DashboardPortal() {
             Asset Management Portal
           </h1>
           <p className="max-w-lg mb-12 leading-relaxed text-lg" style={{ color: COLORS.muted }}>
-            ระบบบริหารจัดการครุภัณฑ์และงานแจ้งซ่อมแบบครบวงจร <br />
+            ระบบบริหารจัดการทรัพย์สินและงานแจ้งซ่อมแบบครบวงจร <br />
             กรุณาเข้าสู่ระบบเพื่อดำเนินการขอยืมอุปกรณ์ หรือแจ้งซ่อม
           </p>
           
@@ -633,7 +633,7 @@ export default function DashboardPortal() {
                     className="text-xs mb-3 tracking-widest uppercase"
                     style={{ color: "rgba(255,255,255,0.7)", fontFamily: "'DM Mono', monospace" }}
                   >
-                    ครุภัณฑ์ทั้งหมด
+                    ทรัพย์สินทั้งหมด
                   </p>
                   <h2
                     style={{

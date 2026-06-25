@@ -88,7 +88,7 @@ export default function LoginPage() {
           <h1 className="text-3xl font-black text-[#2d2b3a] tracking-tight mb-1">
             IT Asset
           </h1>
-          <p className="text-sm text-[#6b6580]">ระบบบริหารจัดการครุภัณฑ์</p>
+          <p className="text-sm text-[#6b6580]">ระบบบริหารจัดการทรัพย์สิน</p>
         </div>
 
         <form onSubmit={handleLogin} className="space-y-5">

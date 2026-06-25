@@ -91,7 +91,15 @@ export async function PATCH(
     }
 
     // 2. จัดการเรื่องอะไหล่ (ถ้ามีการส่งมา)
-    if (parts_usage && Array.isArray(parts_usage)) {
+    if (parts_usage && Array.isArray(parts_usage) && parts_usage.length > 0) {
+      // 🔒 ป้องกันการเบิกอะไหล่เมื่อสถานะไม่ใช่ "Completed" (ตรวจสอบฝั่งเซิร์ฟเวอร์)
+      if (status !== 'Completed') {
+        return NextResponse.json({ 
+          success: false, 
+          error: 'หากมีการเบิกใช้อะไหล่ กรุณาเปลี่ยนสถานะงานเป็น "เสร็จสิ้น" เพื่อตัดสต็อกและปิดงาน' 
+        }, { status: 400 })
+      }
+
       for (const item of parts_usage) {
         // ดึงข้อมูลราคาและสต็อกปัจจุบัน
         const { data: partData } = await supabase
