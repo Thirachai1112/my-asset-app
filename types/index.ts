@@ -30,6 +30,7 @@ export interface Borrow {
   due_date: string | null
   return_date: string | null
   quantity: number
+  renewal_count?: number
   assets?: Asset | null
   users?: User | null
   documents?: Document[] | null
@@ -95,6 +96,26 @@ export interface Document {
   file_url: string | null
   borrow_id: number | null
   repair_id: number | null
+}
+
+// --- Borrow Session Group (กลุ่มรายการยืมที่ยืมพร้อมกัน) ---
+export interface BorrowSessionGroup {
+  /** คีย์สำหรับจัดกลุ่ม (borrower_name + date) */
+  key: string
+  /** รายการยืมทั้งหมดในกลุ่มนี้ */
+  borrows: Borrow[]
+  /** ชื่อผู้ยืม (ใช้สำหรับจัดกลุ่ม) */
+  borrower_name: string
+  /** วันที่ยืม (ใช้สำหรับจัดกลุ่ม) */
+  borrow_date: string
+  /** เอกสารที่แชร์ร่วมกันในกลุ่มนี้ */
+  shared_documents: Document[]
+  /** มีเอกสารแนบแล้วหรือไม่ */
+  has_documents: boolean
+  /** จำนวนรายการยืมในกลุ่ม */
+  item_count: number
+  /** รวมจำนวนชิ้น */
+  total_quantity: number
 }
 
 // --- User (พนักงาน) ---

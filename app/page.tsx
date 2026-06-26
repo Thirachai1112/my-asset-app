@@ -1015,7 +1015,7 @@ export default function DashboardPortal() {
                           </div>
                         </div>
                         <span className="text-xs font-medium" style={{ fontFamily: "'DM Mono', monospace", color: COLORS.primary }}>
-                          {r.status === 'Pending' ? 'รอดำเนินการ' : 'กำลังซ่อม'}
+                          {r.status === 'Pending' ? 'รอดำเนินการ' : r.status === 'In Progress' ? 'กำลังซ่อม' : 'เสร็จสิ้น'}
                         </span>
                       </div>
                     ))

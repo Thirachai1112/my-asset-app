@@ -13,10 +13,11 @@ export async function GET() {
         assets ( id, name, brand, serial_number, type, asset_code, contract_number )
       `)
       .order('id', { ascending: false })
+      .limit(1000)
 
     if (borrowError) throw borrowError
 
-    // 2. ดึงข้อมูลเอกสารทั้งหมด (Documents) โดยดึงทุกคอลัมน์มาดูก่อน
+    // 2. ดึงข้อมูลเอกสารทั้งหมด (Documents)
     const { data: documents, error: docError } = await supabase
       .from('documents')
       .select('*')
@@ -42,7 +43,15 @@ export async function GET() {
       }
     })
 
-    return NextResponse.json({ success: true, history: historyWithDocs })
+    // 4. 🔥 จัดกลุ่มรายการยืมที่ยืมโดยคนเดียวกันในวันเดียวกัน
+    //    เพื่อให้หน้าบ้านสามารถอัปโหลดเอกสารครั้งเดียวผูกทุกแถวได้
+    const sessionGroups = groupBorrowsBySession(historyWithDocs, documents)
+
+    return NextResponse.json({ 
+      success: true, 
+      history: historyWithDocs,
+      session_groups: sessionGroups  // ส่งข้อมูลกลุ่มไปให้หน้าบ้านใช้
+    })
   } catch (err: any) {
     console.error('❌ API Error Detail:', err)
     return NextResponse.json(
@@ -55,7 +64,45 @@ export async function GET() {
 export async function PATCH(request: Request) {
   try {
     const supabase = await createClient()
-    const { borrowId, assetId } = await request.json()
+    const body = await request.json()
+
+    // 🔥 รองรับการคืนแบบ Batch (หลายรายการพร้อมกัน)
+    if (body.batch && Array.isArray(body.batch)) {
+      if (body.batch.length === 0) {
+        return NextResponse.json({ success: false, error: 'ไม่มีรายการที่ต้องการคืน' }, { status: 400 })
+      }
+
+      const now = new Date().toISOString()
+
+      // อัปเดต borrows ทุกรายการใน batch
+      for (const item of body.batch) {
+        if (!item.borrowId || !item.assetId) {
+          return NextResponse.json({ success: false, error: 'ข้อมูลไม่ครบถ้วนในรายการ batch' }, { status: 400 })
+        }
+
+        const { error: borrowError } = await supabase
+          .from('borrows')
+          .update({ return_date: now })
+          .eq('id', item.borrowId)
+
+        if (borrowError) throw borrowError
+
+        const { error: assetError } = await supabase
+          .from('assets')
+          .update({ status: 'Available' })
+          .eq('id', item.assetId)
+
+        if (assetError) throw assetError
+      }
+
+      return NextResponse.json({ 
+        success: true, 
+        message: `คืนทั้งหมด ${body.batch.length} รายการเรียบร้อย` 
+      })
+    }
+
+    // 🔥 คืนรายการเดียว (แบบเดิม)
+    const { borrowId, assetId } = body
 
     if (!borrowId || !assetId) {
       return NextResponse.json({ success: false, error: 'ข้อมูลไม่ครบถ้วน' }, { status: 400 })
@@ -81,4 +128,50 @@ export async function PATCH(request: Request) {
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 })
   }
+}
+
+
+/**
+ * จัดกลุ่มรายการยืมที่ยืมโดยคนเดียวกันในวันเดียวกัน
+ * เพื่อให้สามารถอัปโหลดเอกสารครั้งเดียวและผูกกับทุกรายการในกลุ่มได้
+ */
+function groupBorrowsBySession(borrows: any[], documents: any[]) {
+  const groups: Record<string, any[]> = {}
+
+  borrows.forEach((borrow) => {
+    // สร้างคีย์จากชื่อผู้ยืม + วันที่ยืม (เฉพาะวัน ไม่รวมเวลา)
+    const date = borrow.borrow_date 
+      ? new Date(borrow.borrow_date).toISOString().split('T')[0] 
+      : 'unknown'
+    const key = `${borrow.borrower_name || 'unknown'}_${date}`
+
+    if (!groups[key]) {
+      groups[key] = []
+    }
+    groups[key].push(borrow)
+  })
+
+  // แปลงเป็นอาร์เรย์ของ session groups
+  return Object.entries(groups).map(([key, groupBorrows]) => {
+    // หาเอกสารที่แชร์ร่วมกันในกลุ่มนี้
+    const groupDocIds = new Set<number>()
+    groupBorrows.forEach((b: any) => {
+      if (b.documents) {
+        b.documents.forEach((doc: any) => groupDocIds.add(doc.id))
+      }
+    })
+
+    const sharedDocuments = documents.filter((doc) => groupDocIds.has(doc.id))
+
+    return {
+      key,
+      borrower_name: groupBorrows[0].borrower_name,
+      borrow_date: groupBorrows[0].borrow_date,
+      borrows: groupBorrows,
+      shared_documents: sharedDocuments,
+      has_documents: sharedDocuments.length > 0,
+      item_count: groupBorrows.length,
+      total_quantity: groupBorrows.reduce((sum: number, b: any) => sum + (Number(b.quantity) || 1), 0)
+    }
+  })
 }

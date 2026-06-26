@@ -120,6 +120,45 @@ export default function RepairTable() {
     }
   }
 
+  // 🗑️ ฟังก์ชันลบเอกสารของรายการซ่อม
+  const handleDeleteDocument = async (repair: any) => {
+    try {
+      const confirmed = await Swal.fire({
+        icon: 'question',
+        title: 'ยืนยันการลบเอกสาร?',
+        text: 'เอกสารจะถูกลบออกจากระบบ คุณสามารถอัปโหลดใหม่ได้ภายหลัง',
+        showCancelButton: true,
+        confirmButtonColor: '#dc2626',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: '🗑️ ใช่ ลบเลย',
+        cancelButtonText: 'ยกเลิก',
+        reverseButtons: true,
+      })
+      if (!confirmed.isConfirmed) return
+
+      const res = await fetch('/api/repairs/documents/delete', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ repair_id: repair.id })
+      })
+      const json = await res.json()
+      if (!res.ok || !json.success) {
+        throw new Error(json.error || 'ไม่สามารถลบเอกสารได้')
+      }
+      Swal.fire({
+        icon: 'success',
+        title: 'ลบเอกสารสำเร็จ!',
+        text: 'คุณสามารถอัปโหลดเอกสารใหม่ได้',
+        timer: 1500,
+        showConfirmButton: false,
+      })
+      fetchRepairs()
+    } catch (error: any) {
+      console.error('❌ Delete Document Error:', error)
+      Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: error?.message || 'ไม่สามารถลบเอกสารได้' })
+    }
+  }
+
   const handleDelete = async (id: number) => {
     const result = await Swal.fire({
       title: 'ยืนยันการลบ?',
@@ -343,7 +382,8 @@ export default function RepairTable() {
         </div>
       </div>
 
-      <div className="overflow-x-auto border border-slate-200 rounded-xl bg-white shadow-sm">
+      {/* ===== DESKTOP TABLE VIEW (hidden on small screens) ===== */}
+      <div className="hidden md:block overflow-x-auto border border-slate-200 rounded-xl bg-white shadow-sm">
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 text-xs uppercase font-bold tracking-wider">
@@ -418,6 +458,13 @@ export default function RepairTable() {
                         >
                           👁️ ดูไฟล์
                         </a>
+                        <button
+                          onClick={() => handleDeleteDocument(repair)}
+                          className="bg-white text-red-500 hover:bg-red-500 hover:text-white px-2 py-1 rounded text-[10px] font-bold border border-red-200 w-full transition-all"
+                          title="ลบเอกสารเพื่ออัปโหลดใหม่"
+                        >
+                          🗑️ ลบ
+                        </button>
                         <div className="scale-90 opacity-70 hover:opacity-100 transition-opacity">
                           <RepairDocumentUploader repairId={repair.id} onUploadSuccess={fetchRepairs} />
                         </div>
@@ -471,6 +518,121 @@ export default function RepairTable() {
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* ===== MOBILE CARD VIEW (shown on small screens) ===== */}
+      <div className="md:hidden space-y-3">
+        {currentRepairs.length > 0 ? (
+          currentRepairs.map((repair, index) => (
+            <div
+              key={repair.id}
+              className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm space-y-3"
+            >
+              {/* Header: Index + Status */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-mono text-slate-400 bg-slate-50 px-2 py-0.5 rounded-md">
+                    #{indexOfFirstItem + index + 1}
+                  </span>
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                    REPAIR_STATUS.find(s => s.value === repair.status)?.color || 'bg-slate-50 text-slate-700'
+                  }`}>
+                    {REPAIR_STATUS.find(s => s.value === repair.status)?.label.split(' ')[1] || repair.status}
+                  </span>
+                </div>
+                <div className="text-xs font-mono font-bold text-blue-600">
+                  ฿{repair.grand_total ? repair.grand_total.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '0.00'}
+                </div>
+              </div>
+
+              {/* Info Grid */}
+              <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
+                <div>
+                  <span className="text-[10px] text-slate-400 block">วันที่แจ้ง</span>
+                  <span className="font-medium text-slate-700">{new Date(repair.repair_date).toLocaleDateString('th-TH')}</span>
+                </div>
+                {repair.repair_finish && (
+                  <div>
+                    <span className="text-[10px] text-slate-400 block">วันที่เสร็จ</span>
+                    <span className="font-medium text-emerald-600">{new Date(repair.repair_finish).toLocaleDateString('th-TH')}</span>
+                  </div>
+                )}
+                <div>
+                  <span className="text-[10px] text-slate-400 block">รหัสพนักงาน</span>
+                  <span className="font-mono font-bold text-slate-600 uppercase">{repair.requester_emp_code || '-'}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-400 block">เลขครุภัณฑ์</span>
+                  <span className="font-mono font-bold text-amber-700">{repair.item?.assets_number || '-'}</span>
+                </div>
+                <div className="col-span-2">
+                  <span className="text-[10px] text-slate-400 block">ผู้แจ้งซ่อม</span>
+                  <span className="font-semibold text-slate-900">{repair.requester_name || 'ไม่ระบุชื่อ'}</span>
+                  <span className="text-slate-500"> | {repair.requester_dept || '-'}</span>
+                </div>
+                <div className="col-span-2">
+                  <span className="text-[10px] text-slate-400 block">อุปกรณ์</span>
+                  <span className="font-medium text-slate-800">{repair.item?.manual_brand || 'ไม่ระบุ'}</span>
+                  <span className="text-slate-500 font-mono"> (SN: {repair.item?.manual_sn || '-'})</span>
+                </div>
+                <div className="col-span-2">
+                  <span className="text-[10px] text-slate-400 block">อาการเสีย</span>
+                  <span className="text-slate-700 line-clamp-2">{repair.item?.problem_detail || '-'}</span>
+                </div>
+                {repair.fix_detail && (
+                  <div className="col-span-2">
+                    <span className="text-[10px] text-slate-400 block">วิธีการซ่อม</span>
+                    <span className="text-slate-700 line-clamp-2">{repair.fix_detail}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Actions */}
+              <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100">
+                {/* Document */}
+                <div className="flex items-center gap-1">
+                  {repair.file_url ? (
+                    <>
+                      <a href={repair.file_url} target="_blank" rel="noreferrer"
+                        className="bg-emerald-50 text-emerald-600 hover:bg-emerald-100 px-2 py-1 rounded text-[10px] font-bold border border-emerald-200">
+                        👁️ ดูไฟล์
+                      </a>
+                      <button onClick={() => handleDeleteDocument(repair)}
+                        className="bg-white text-red-500 hover:bg-red-500 hover:text-white px-2 py-1 rounded text-[10px] font-bold border border-red-200 transition-all">
+                        🗑️ ลบ
+                      </button>
+                    </>
+                  ) : null}
+                  <RepairDocumentUploader repairId={repair.id} onUploadSuccess={fetchRepairs} />
+                </div>
+
+                <div className="flex-1"></div>
+
+                {/* Action Buttons */}
+                <button onClick={() => generateRepairPDF(repair)}
+                  className="bg-slate-50 text-slate-600 hover:bg-slate-100 px-2 py-1 rounded text-[10px] font-bold border border-slate-200">
+                  🖨️ ใบซ่อม
+                </button>
+                <button onClick={() => generateRepairPDFquick(repair)}
+                  className="bg-slate-50 text-slate-600 hover:bg-slate-100 px-2 py-1 rounded text-[10px] font-bold border border-slate-200">
+                  🖨️ ด่วน
+                </button>
+                <button onClick={() => openModal(repair)}
+                  className="bg-blue-50 text-blue-600 hover:bg-blue-100 px-2 py-1 rounded text-[10px] font-bold border border-blue-200">
+                  📝
+                </button>
+                <button onClick={() => handleDelete(repair.id)}
+                  className="bg-red-50 text-red-600 hover:bg-red-100 px-2 py-1 rounded text-[10px] font-bold border border-red-200">
+                  🗑️
+                </button>
+              </div>
+            </div>
+          ))
+        ) : (
+          <div className="p-8 text-center text-slate-400 bg-white border border-slate-200 rounded-xl">
+            ❌ ไม่พบข้อมูลการซ่อม
+          </div>
+        )}
       </div>
 
       {/* Pagination */}
