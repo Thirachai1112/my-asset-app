@@ -50,16 +50,16 @@ export default function Modal({
       >
         {/* Header */}
         <div
-          className={`border-b px-6 py-4 flex justify-between items-center shrink-0 ${
+          className={`border-b px-4 sm:px-6 py-3 sm:py-4 flex justify-between items-center shrink-0 ${
             darkHeader
               ? 'bg-slate-900 text-white border-slate-800'
               : 'bg-slate-50 border-slate-100'
           }`}
         >
-          <h4 className="font-bold text-base">{title}</h4>
+          <h4 className="font-bold text-sm sm:text-base truncate pr-2">{title}</h4>
           <button
             onClick={onClose}
-            className={`text-2xl leading-none hover:opacity-70 transition-opacity ${
+            className={`text-xl sm:text-2xl leading-none hover:opacity-70 transition-opacity shrink-0 ${
               darkHeader ? 'text-slate-400 hover:text-white' : 'text-slate-400 hover:text-slate-600'
             }`}
           >

@@ -570,43 +570,43 @@ export default function BorrowTable() {
 
   return (
     <div className="w-full">
-      {/* 📊 Summary Dashboard (เหมือนหน้าซ่อม) */}
-      <div className="mx-6 mt-6 bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="p-2 bg-indigo-600 rounded-lg text-white">📊</div>
-          <div>
-            <h4 className="font-bold text-slate-800">สรุปภาพรวมการยืม-คืน</h4>
-            <p className="text-[10px] text-slate-400 uppercase tracking-wider">Borrowing & Return Analytics</p>
+      {/* 📊 Summary Dashboard */}
+      <div className="mx-4 sm:mx-6 mt-4 sm:mt-6 bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 shadow-sm">
+        <div className="flex items-center gap-3 mb-4 sm:mb-6">
+          <div className="p-2 bg-indigo-600 rounded-lg text-white shrink-0">📊</div>
+          <div className="min-w-0">
+            <h4 className="font-bold text-slate-800 text-sm sm:text-base truncate">สรุปภาพรวมการยืม-คืน</h4>
+            <p className="text-[10px] text-slate-400 uppercase tracking-wider truncate">Borrowing & Return Analytics</p>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-slate-50 border border-slate-100 p-4 rounded-2xl">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+          <div className="bg-slate-50 border border-slate-100 p-3 sm:p-4 rounded-2xl">
             <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">จำนวนเครื่องที่ยืมอยู่</p>
-            <p className="text-2xl font-black text-indigo-600">{activeQuantity} <span className="text-sm font-medium text-slate-400">ชิ้น</span></p>
+            <p className="text-xl sm:text-2xl font-black text-indigo-600">{activeQuantity} <span className="text-sm font-medium text-slate-400">ชิ้น</span></p>
           </div>
-          <div className="bg-slate-50 border border-slate-100 p-4 rounded-2xl">
+          <div className="bg-slate-50 border border-slate-100 p-3 sm:p-4 rounded-2xl">
             <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">รายการที่เลยกำหนด</p>
-            <p className="text-2xl font-black text-red-500">{urgentItems.length} <span className="text-sm font-medium text-slate-400">รายการ</span></p>
+            <p className="text-xl sm:text-2xl font-black text-red-500">{urgentItems.length} <span className="text-sm font-medium text-slate-400">รายการ</span></p>
           </div>
-          <div className="bg-slate-50 border border-slate-100 p-4 rounded-2xl">
+          <div className="bg-slate-50 border border-slate-100 p-3 sm:p-4 rounded-2xl">
             <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">ประวัติรายการทั้งหมด</p>
-            <p className="text-2xl font-black text-slate-800">{filteredBorrows.length} <span className="text-sm font-medium text-slate-400">รายการ</span></p>
+            <p className="text-xl sm:text-2xl font-black text-slate-800">{filteredBorrows.length} <span className="text-sm font-medium text-slate-400">รายการ</span></p>
           </div>
         </div>
       </div>
 
       {/* 🚨 Urgent Alerts */}
       {urgentItems.length > 0 && (
-        <div className="mx-6 mt-6 bg-red-50/50 border border-red-100 p-4 rounded-2xl flex items-start gap-4 animate-in fade-in slide-in-from-top-4 duration-500">
-          <div className="w-10 h-10 bg-red-100 text-red-600 rounded-xl flex items-center justify-center text-xl shrink-0">
+        <div className="mx-4 sm:mx-6 mt-4 sm:mt-6 bg-red-50/50 border border-red-100 p-3 sm:p-4 rounded-2xl flex items-start gap-3 sm:gap-4 animate-in fade-in slide-in-from-top-4 duration-500">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-red-100 text-red-600 rounded-xl flex items-center justify-center text-base sm:text-xl shrink-0">
             🔔
           </div>
-          <div>
-            <h4 className="text-red-900 font-bold text-sm">รายการที่ต้องติดตามคืนด่วน ({urgentItems.length} รายการ / รวม {urgentQuantity} ชิ้น)</h4>
-            <div className="text-xs text-red-700/80 mt-1.5 space-y-1">
+          <div className="min-w-0">
+            <h4 className="text-red-900 font-bold text-xs sm:text-sm">รายการที่ต้องติดตามคืนด่วน ({urgentItems.length} รายการ / รวม {urgentQuantity} ชิ้น)</h4>
+            <div className="text-[11px] sm:text-xs text-red-700/80 mt-1.5 space-y-1">
               {urgentItems.slice(0, 3).map((item) => (
-                <p key={item.id}>• <span className="font-semibold text-red-800">{item.borrower_name}</span> ยืม {item.assets?.name} จำนวน {item.quantity || 1} ชิ้น (กำหนดคืน: {new Date(item.due_date!).toLocaleDateString('th-TH')})</p>
+                <p key={item.id} className="leading-relaxed">• <span className="font-semibold text-red-800">{item.borrower_name}</span> ยืม {item.assets?.name} จำนวน {item.quantity || 1} ชิ้น (กำหนดคืน: {new Date(item.due_date!).toLocaleDateString('th-TH')})</p>
               ))}
               {urgentItems.length > 3 && <p className="italic font-medium text-red-600">...และอีก {urgentItems.length - 3} รายการที่เหลือ</p>}
             </div>
@@ -615,11 +615,11 @@ export default function BorrowTable() {
       )}
 
       {/* Control Panel */}
-      <div className="p-6 pb-0 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div>
-            <h3 className="text-xl font-bold text-slate-900">ประวัติการยืม-คืน</h3>
-            <p className="text-sm text-slate-500">พบทั้งหมด {filteredBorrows.length} รายการ (รวม {totalQuantity} ชิ้น)</p>
+      <div className="p-4 sm:p-6 pb-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+          <div className="min-w-0">
+            <h3 className="text-lg sm:text-xl font-bold text-slate-900 truncate">ประวัติการยืม-คืน</h3>
+            <p className="text-xs sm:text-sm text-slate-500">พบทั้งหมด {filteredBorrows.length} รายการ (รวม {totalQuantity} ชิ้น)</p>
           </div>
 
           {/* 📅 Month Filter */}
@@ -629,7 +629,7 @@ export default function BorrowTable() {
               setSelectedMonth(e.target.value)
               setCurrentPage(1)
             }}
-            className="ml-4 px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-700 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all shadow-sm cursor-pointer"
+            className="sm:ml-4 px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-700 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all shadow-sm cursor-pointer w-full sm:w-auto"
           >
             <option value="all">📅 ทุกเดือน</option>
             {monthOptions.map((key) => (
@@ -651,18 +651,18 @@ export default function BorrowTable() {
       </div>
 
       {/* Table Container */}
-      <div className="p-6">
-        <div className="overflow-x-auto rounded-2xl border border-slate-100 shadow-sm">
-          <table className="w-full text-left border-collapse min-w-[1000px]">
+      <div className="p-3 sm:p-6">
+        <div className="overflow-x-auto rounded-xl sm:rounded-2xl border border-slate-100 shadow-sm">
+          <table className="w-full text-left border-collapse min-w-[900px] lg:min-w-0">
             <thead>
-              <tr className="bg-slate-50/50 text-slate-500 text-[11px] uppercase font-bold tracking-widest border-b border-slate-100">
-                <th className="px-4 py-4 text-center w-16">#</th>
-                <th className="px-4 py-4">ข้อมูลผู้ยืม</th>
-                <th className="px-4 py-4">อุปกรณ์</th>
-                <th className="px-4 py-4 text-center">จำนวน</th>
-                <th className="px-4 py-4">วันที่ทำรายการ</th>
-                <th className="px-4 py-4 text-center">สถานะ</th>
-                <th className="px-4 py-4 text-center">การจัดการ</th>
+              <tr className="bg-slate-50/50 text-slate-500 text-[10px] sm:text-[11px] uppercase font-bold tracking-widest border-b border-slate-100">
+                <th className="px-2 sm:px-4 py-3 sm:py-4 text-center w-10 sm:w-16">#</th>
+                <th className="px-2 sm:px-4 py-3 sm:py-4">ข้อมูลผู้ยืม</th>
+                <th className="px-2 sm:px-4 py-3 sm:py-4">อุปกรณ์</th>
+                <th className="px-2 sm:px-4 py-3 sm:py-4 text-center">จำนวน</th>
+                <th className="px-2 sm:px-4 py-3 sm:py-4">วันที่ทำรายการ</th>
+                <th className="px-2 sm:px-4 py-3 sm:py-4 text-center">สถานะ</th>
+                <th className="px-2 sm:px-4 py-3 sm:py-4 text-center">การจัดการ</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
@@ -678,73 +678,73 @@ export default function BorrowTable() {
 
                   return (
                     <tr key={borrow.id} className={`group hover:bg-slate-50/80 transition-all ${isUrgent ? 'bg-red-50/30' : ''}`}>
-                      <td className="px-4 py-5 text-center text-slate-400 font-mono text-xs">
+                      <td className="px-2 sm:px-4 py-3 sm:py-5 text-center text-slate-400 font-mono text-[10px] sm:text-xs">
                         {(indexOfFirstItem + index + 1).toString().padStart(2, '0')}
                       </td>
-                      <td className="px-4 py-5">
+                      <td className="px-2 sm:px-4 py-3 sm:py-5">
                         <div className="flex flex-col">
-                          <span className="font-bold text-slate-900 leading-tight">{borrow.borrower_name}</span>
+                          <span className="font-bold text-slate-900 leading-tight text-xs sm:text-sm">{borrow.borrower_name}</span>
                           <div className="flex flex-col gap-0.5 mt-1">
-                            <span className="text-[11px] text-slate-600 font-medium">ตำแหน่ง: {borrow.position || '-'}</span>
-                            <span className="text-[11px] text-slate-500">แผนก: {borrow.borrower_dept || '-'}</span>
+                            <span className="text-[10px] sm:text-[11px] text-slate-600 font-medium">ตำแหน่ง: {borrow.position || '-'}</span>
+                            <span className="text-[10px] sm:text-[11px] text-slate-500">แผนก: {borrow.borrower_dept || '-'}</span>
                           </div>
-                          <span className="text-[10px] text-blue-500 font-bold mt-1.5 inline-flex items-center gap-1">
+                          <span className="text-[9px] sm:text-[10px] text-blue-500 font-bold mt-1.5 inline-flex items-center gap-1">
                             📞 {borrow.phone || '-'}
                           </span>
                         </div>
                       </td>
-                      <td className="px-4 py-5">
-                        <div className="flex flex-col max-w-[220px]">
-                          <span className="font-semibold text-slate-800 truncate" title={borrow.assets?.name}>
+                      <td className="px-2 sm:px-4 py-3 sm:py-5">
+                        <div className="flex flex-col max-w-[180px] sm:max-w-[220px]">
+                          <span className="font-semibold text-slate-800 truncate text-xs sm:text-sm" title={borrow.assets?.name}>
                             {borrow.assets?.name || 'ไม่พบข้อมูล'}
                           </span>
                           <div className="flex flex-col gap-0.5 mt-1.5">
-                            <span className="text-[10px] text-slate-500 font-mono">
+                            <span className="text-[9px] sm:text-[10px] text-slate-500 font-mono">
                               asset NO: <span className="text-blue-600 font-bold">{borrow.assets?.asset_code || '-'}</span>
                             </span>
-                            <span className="text-[10px] text-slate-500 font-mono">
+                            <span className="text-[9px] sm:text-[10px] text-slate-500 font-mono">
                               SN: <span className="text-slate-700">{borrow.assets?.serial_number || '-'}</span>
                             </span>
-                            <span className="text-[10px] text-slate-400">
+                            <span className="text-[9px] sm:text-[10px] text-slate-400">
                               Contract: {borrow.assets?.contract_number || '-'}
                             </span>
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-5 text-center">
-                        <span className="px-2 py-1 bg-slate-100 text-slate-600 rounded-lg text-xs font-bold border border-slate-200">
+                      <td className="px-2 sm:px-4 py-3 sm:py-5 text-center">
+                        <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-slate-100 text-slate-600 rounded-lg text-[10px] sm:text-xs font-bold border border-slate-200">
                           {borrow.quantity || 1}
                         </span>
                       </td>
-                      <td className="px-4 py-5">
-                        <div className="flex flex-col text-[11px]">
-                          <div className="flex items-center gap-1.5 text-slate-600">
-                            <span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
-                            ยืม: {new Date(borrow.borrow_date).toLocaleDateString('th-TH')}
+                      <td className="px-2 sm:px-4 py-3 sm:py-5">
+                        <div className="flex flex-col text-[10px] sm:text-[11px]">
+                          <div className="flex items-center gap-1 sm:gap-1.5 text-slate-600">
+                            <span className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-blue-400 shrink-0"></span>
+                            <span className="truncate">ยืม: {new Date(borrow.borrow_date).toLocaleDateString('th-TH')}</span>
                           </div>
-                          <div className={`flex items-center gap-1.5 mt-1.5 ${isUrgent ? 'text-red-500 font-bold' : 'text-slate-400'}`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${isUrgent ? 'bg-red-500 animate-ping' : 'bg-slate-300'}`}></span>
-                            คืน: {borrow.due_date ? new Date(borrow.due_date).toLocaleDateString('th-TH') : '-'}
+                          <div className={`flex items-center gap-1 sm:gap-1.5 mt-1 sm:mt-1.5 ${isUrgent ? 'text-red-500 font-bold' : 'text-slate-400'}`}>
+                            <span className={`w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full shrink-0 ${isUrgent ? 'bg-red-500 animate-ping' : 'bg-slate-300'}`}></span>
+                            <span className="truncate">คืน: {borrow.due_date ? new Date(borrow.due_date).toLocaleDateString('th-TH') : '-'}</span>
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-5 text-center">
-                        <div className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wide uppercase border ${
+                      <td className="px-2 sm:px-4 py-3 sm:py-5 text-center">
+                        <div className={`inline-flex items-center px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-full text-[9px] sm:text-[10px] font-bold tracking-wide uppercase border ${
                           borrow.return_date
                             ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
                             : 'bg-amber-50 text-amber-600 border-amber-100'
                         }`}>
-                          <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${borrow.return_date ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'}`}></span>
+                          <span className={`w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full mr-1 ${borrow.return_date ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'}`}></span>
                           {borrow.return_date ? 'Returned' : 'In Use'}
                         </div>
                       </td>
-                      <td className="px-4 py-5 text-center">
-                        <div className="flex items-center justify-center gap-2">
+                      <td className="px-2 sm:px-4 py-3 sm:py-5 text-center">
+                        <div className="flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2">
                           {!borrow.return_date && (
-                            <>
+                            <div className="flex items-center gap-1 sm:gap-2">
                               <button
                                 onClick={() => handleReturn(borrow.id, borrow.assets?.id!, borrow)}
-                                className="p-2 bg-white text-blue-600 hover:bg-blue-600 hover:text-white border border-blue-200 rounded-xl transition-all shadow-sm"
+                                className="p-1.5 sm:p-2 bg-white text-blue-600 hover:bg-blue-600 hover:text-white border border-blue-200 rounded-lg sm:rounded-xl transition-all shadow-sm text-xs sm:text-base"
                                 title="ยืนยันการคืน"
                               >
                                 ↩️
@@ -752,29 +752,29 @@ export default function BorrowTable() {
 
                               <button
                                 onClick={() => openRenewModal(borrow)}
-                                className="p-2 bg-white text-amber-600 hover:bg-amber-600 hover:text-white border border-amber-200 rounded-xl transition-all shadow-sm"
+                                className="p-1.5 sm:p-2 bg-white text-amber-600 hover:bg-amber-600 hover:text-white border border-amber-200 rounded-lg sm:rounded-xl transition-all shadow-sm text-xs sm:text-base"
                                 title="ต่ออายุการยืม"
                               >
                                 🔄
                               </button>
-                            </>
+                            </div>
                           )}
 
-                          <div className="flex flex-col gap-1">
+                          <div className="flex flex-wrap items-center justify-center gap-1">
                             {/* 🔥 แสดงปุ่ม View Doc - ใช้ shared document ถ้ามี */}
                             {(borrow.file_url || (isPartOfGroup && sessionGroup?.has_documents)) && (
                               <a
                                 href={borrow.file_url || (sessionGroup?.shared_documents[0]?.file_url || '#')}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="px-3 py-1 bg-white text-emerald-600 hover:bg-emerald-50 border border-emerald-200 rounded-lg text-[10px] font-bold transition-all shadow-sm text-center"
+                                className="px-2 sm:px-3 py-0.5 sm:py-1 bg-white text-emerald-600 hover:bg-emerald-50 border border-emerald-200 rounded-lg text-[9px] sm:text-[10px] font-bold transition-all shadow-sm text-center whitespace-nowrap"
                               >
                                 View Doc
                               </a>
                             )}
                             
                             {/* 🔥 ปุ่มอัปโหลด - แสดงไอคอนกลุ่มถ้ามีรายการอื่นใน session เดียวกัน */}
-                            <label className={`cursor-pointer px-3 py-1 rounded-lg text-[10px] font-bold border transition-all shadow-sm text-center
+                            <label className={`cursor-pointer px-2 sm:px-3 py-0.5 sm:py-1 rounded-lg text-[9px] sm:text-[10px] font-bold border transition-all shadow-sm text-center whitespace-nowrap
                               ${borrow.file_url || (isPartOfGroup && sessionGroup?.has_documents)
                                 ? 'bg-slate-50 text-slate-400 border-slate-100 hover:bg-white hover:text-slate-600'
                                 : isPartOfGroup
@@ -804,7 +804,7 @@ export default function BorrowTable() {
                             {(borrow.file_url || (isPartOfGroup && sessionGroup?.has_documents)) && (
                               <button
                                 onClick={() => handleDeleteDocument(borrow)}
-                                className="px-3 py-1 bg-white text-red-500 hover:bg-red-500 hover:text-white border border-red-200 rounded-lg text-[10px] font-bold transition-all shadow-sm text-center"
+                                className="px-2 sm:px-3 py-0.5 sm:py-1 bg-white text-red-500 hover:bg-red-500 hover:text-white border border-red-200 rounded-lg text-[9px] sm:text-[10px] font-bold transition-all shadow-sm text-center whitespace-nowrap"
                                 title="ลบเอกสารเพื่ออัปโหลดใหม่"
                               >
                                 🗑️ ลบ
@@ -813,7 +813,7 @@ export default function BorrowTable() {
 
                             {/* 🔥 แสดง badge "แชร์เอกสาร" ถ้ารายการนี้ใช้เอกสารร่วมกับรายการอื่น */}
                             {isPartOfGroup && sessionGroup?.has_documents && (
-                              <span className="text-[9px] text-indigo-500 font-medium mt-0.5">
+                              <span className="text-[8px] sm:text-[9px] text-indigo-500 font-medium w-full text-center">
                                 📎 แชร์กับ {sessionGroup.item_count - 1} รายการ
                               </span>
                             )}
@@ -825,10 +825,10 @@ export default function BorrowTable() {
                 })
               ) : (
                 <tr>
-                  <td colSpan={7} className="px-4 py-20 text-center">
+                  <td colSpan={7} className="px-2 sm:px-4 py-10 sm:py-20 text-center">
                     <div className="flex flex-col items-center">
-                      <span className="text-4xl mb-4 opacity-20">📂</span>
-                      <p className="text-slate-400 font-medium">ไม่พบประวัติการทำรายการ</p>
+                      <span className="text-3xl sm:text-4xl mb-3 sm:mb-4 opacity-20">📂</span>
+                      <p className="text-slate-400 font-medium text-xs sm:text-sm">ไม่พบประวัติการทำรายการ</p>
                     </div>
                   </td>
                 </tr>
@@ -860,16 +860,16 @@ export default function BorrowTable() {
         maxWidth="max-w-lg"
       >
         {renewTarget && (
-          <div className="p-6 space-y-5">
+          <div className="p-4 sm:p-6 space-y-4 sm:space-y-5">
             {/* ข้อมูลรายการยืม */}
-            <div className="bg-amber-50 border border-amber-100 rounded-xl p-4 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-amber-700 uppercase tracking-wider">รายละเอียดการยืม</span>
-                <span className="text-[10px] px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full font-bold">
+            <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 sm:p-4 space-y-2">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-2">
+                <span className="text-[11px] sm:text-xs font-semibold text-amber-700 uppercase tracking-wider">รายละเอียดการยืม</span>
+                <span className="text-[9px] sm:text-[10px] px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full font-bold self-start sm:self-auto">
                   ต่ออายุครั้งที่ {renewTarget.renewal_count || 0}/3
                 </span>
               </div>
-              <div className="text-sm space-y-1">
+              <div className="text-xs sm:text-sm space-y-1">
                 <p><span className="font-semibold text-slate-700">ผู้ยืม:</span> <span className="text-slate-900">{renewTarget.borrower_name}</span></p>
                 <p><span className="font-semibold text-slate-700">อุปกรณ์:</span> <span className="text-slate-900">{renewTarget.assets?.name || '-'}</span></p>
                 <p><span className="font-semibold text-slate-700">วันที่คืนเดิม:</span> <span className="text-slate-900">{renewTarget.due_date ? new Date(renewTarget.due_date).toLocaleDateString('th-TH') : '-'}</span></p>
@@ -878,7 +878,7 @@ export default function BorrowTable() {
 
             {/* เลือกวันที่คืนใหม่ (มีปฏิทิน + แสดง d/m/y) */}
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">
+              <label className="block text-xs sm:text-sm font-semibold text-slate-700 mb-2">
                 เลือกวันที่คืนใหม่ <span className="text-red-500">*</span>
               </label>
               <div className="relative">
@@ -887,35 +887,35 @@ export default function BorrowTable() {
                   value={newDueDate}
                   onChange={(e) => setNewDueDate(e.target.value)}
                   min={renewTarget.due_date ? new Date(renewTarget.due_date).toISOString().split('T')[0] : undefined}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100 transition-all [color-scheme:light]"
+                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl border border-slate-200 text-xs sm:text-sm focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100 transition-all [color-scheme:light]"
                 />
                 {newDueDate && (
-                  <div className="mt-2 px-3 py-1.5 bg-amber-50 border border-amber-100 rounded-lg text-sm text-amber-800 font-medium inline-block">
+                  <div className="mt-2 px-2 sm:px-3 py-1 sm:py-1.5 bg-amber-50 border border-amber-100 rounded-lg text-xs sm:text-sm text-amber-800 font-medium inline-block">
                     📅 {new Date(newDueDate).toLocaleDateString('th-TH')}
                   </div>
                 )}
               </div>
-              <p className="text-[11px] text-slate-400 mt-1.5">
+              <p className="text-[10px] sm:text-[11px] text-slate-400 mt-1.5">
                 วันที่คืนใหม่ต้องมากกว่าวันที่คืนเดิม
               </p>
             </div>
 
             {/* ปุ่มดำเนินการ */}
-            <div className="flex gap-3 pt-2">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-2">
               <button
                 onClick={() => {
                   setRenewModalOpen(false)
                   setRenewTarget(null)
                   setNewDueDate('')
                 }}
-                className="flex-1 px-4 py-3 rounded-xl text-sm font-semibold border border-slate-200 text-slate-600 hover:bg-slate-50 transition-all"
+                className="w-full sm:flex-1 px-4 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm font-semibold border border-slate-200 text-slate-600 hover:bg-slate-50 transition-all order-2 sm:order-1"
               >
                 ยกเลิก
               </button>
               <button
                 onClick={handleRenew}
                 disabled={!newDueDate || renewing}
-                className="flex-1 px-4 py-3 rounded-xl text-sm font-bold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full sm:flex-1 px-4 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm font-bold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed order-1 sm:order-2"
                 style={{
                   background: !newDueDate || renewing ? '#94a3b8' : 'linear-gradient(135deg, #f59e0b, #d97706)',
                   boxShadow: !newDueDate || renewing ? 'none' : '0 4px 15px rgba(245,158,11,0.3)',
