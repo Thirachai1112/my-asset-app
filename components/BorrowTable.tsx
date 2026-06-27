@@ -545,6 +545,7 @@ export default function BorrowTable() {
       borrow.borrower_dept?.toLowerCase().includes(searchLower) ||
       borrow.position?.toLowerCase().includes(searchLower) ||
       (borrow.phone || '').includes(searchLower) ||
+      borrow.purpose?.toLowerCase().includes(searchLower) ||
       statusText.includes(searchLower) ||
       (borrow.assets?.name?.toLowerCase() || '').includes(searchLower) ||
       (borrow.assets?.serial_number?.toLowerCase() || '').includes(searchLower) ||
@@ -691,6 +692,9 @@ export default function BorrowTable() {
                           <span className="text-[9px] sm:text-[10px] text-blue-500 font-bold mt-1.5 inline-flex items-center gap-1">
                             📞 {borrow.phone || '-'}
                           </span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] sm:text-[11px] text-slate-600 font-medium">วัตถุประสงค์: {borrow.purpose || '-'}</span>
                         </div>
                       </td>
                       <td className="px-2 sm:px-4 py-3 sm:py-5">
