@@ -3,32 +3,31 @@ name: Supabase Daily Backup
 on:
   schedule:
     - cron: '0 0 * * *'  # รันทุกเที่ยงคืน
-  workflow_dispatch:     # กดรันเองได้
+  workflow_dispatch:     # กดรันเองได้ตลอดเวลา
 
 jobs:
   backup:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4  # อัปเดตตัวดึงโค้ดล่าสุด
+        uses: actions/checkout@v4
 
-      - name: Setup Supabase CLI
-        uses: supabase/setup-cli@v1
-        with:
-          version: latest
+      - name: Install PostgreSQL Client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
 
       - name: Run Database Dump
         run: |
           mkdir -p backups
-          supabase db dump --db-url "${{ secrets.SUPABASE_DB_URL }}" -f backups/schema.sql
-          supabase db dump --db-url "${{ secrets.SUPABASE_DB_URL }}" -f backups/data.sql --data-only --use-copy
+          # ดึงโครงสร้างและข้อมูลทั้งหมดรวมไว้ในไฟล์เดียวด้วย pg_dump โดยตรง
+          pg_dump "${{ secrets.SUPABASE_DB_URL }}" --clean --no-owner --no-privileges -f backups/complete_backup.sql
 
       - name: Commit and Push to Git
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@://github.com"
           git add backups/
-          # ตรวจสอบว่ามีการเปลี่ยนแปลงจริงไหมก่อนจะ Commit เพื่อไม่ให้เกิด Error
           if ! git diff --cached --quiet; then
             git commit -m "Automated backup: $(date +'%Y-%m-%d %H:%M:%S')"
             git push
