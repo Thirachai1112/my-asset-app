@@ -17,16 +17,23 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y postgresql-client
 
-      - name: Run Database Dump
+      - name: Run Database Dump via TCP
+        env:
+          # ระบบดึงพารามิเตอร์จาก URL มาจัดสรรให้อัตโนมัติ ป้องกันปัญหาการอ่าน Socket
+          PGPASSWORD: "0874296400ws"
+          PGHOST: "://supabase.com"
+          PGPORT: "5432"
+          PGUSER: "postgres"
+          PGDATABASE: "postgres"
         run: |
           mkdir -p backups
-          # ดึงโครงสร้างและข้อมูลทั้งหมดรวมไว้ในไฟล์เดียวด้วย pg_dump โดยตรง
-          pg_dump "${{ secrets.SUPABASE_DB_URL }}" --clean --no-owner --no-privileges -f backups/complete_backup.sql
+          # สั่งรัน pg_dump โดยใช้โครงสร้างแยกพารามิเตอร์ บังคับดึงข้อมูลระยะไกล
+          pg_dump --clean --no-owner --no-privileges -f backups/complete_backup.sql
 
       - name: Commit and Push to Git
         run: |
           git config --global user.name "github-actions[bot]"
-          git config --global user.email "41898282+github-actions[bot]@://github.com"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add backups/
           if ! git diff --cached --quiet; then
             git commit -m "Automated backup: $(date +'%Y-%m-%d %H:%M:%S')"
