@@ -1,0 +1,35 @@
+name: Supabase Daily Backup
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # สั่งให้ทำงานอัตโนมัติทุกวันตอนเที่ยงคืน (เวลา UTC)
+  workflow_dispatch:     # บรรทัดนี้ช่วยให้เรากดสั่ง Backup ด้วยตัวเองผ่านเว็บ GitHub ได้ตลอดเวลา
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Run Database Dump
+        run: |
+          # สร้างโฟลเดอร์สำหรับเก็บไฟล์ Backup หากยังไม่มี
+          mkdir -p backups
+          
+          # ดัมป์โครงสร้างตาราง (Schema) และข้อมูล (Data) ออกมา
+          supabase db dump --db-url "${{ secrets.SUPABASE_DB_URL }}" -f backups/schema.sql
+          supabase db dump --db-url "${{ secrets.SUPABASE_DB_URL }}" -f backups/data.sql --data-only --use-copy
+
+      - name: Commit and Push to Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@://github.com"
+          git add backups/
+          git commit -m "Automated backup: $(date +'%Y-%m-%d %H:%M:%S')" || exit 0
+          git push
