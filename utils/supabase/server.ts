@@ -9,10 +9,9 @@ export async function createClient() {
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
   if (!supabaseUrl || !supabaseAnonKey) {
-    // ส่งคืน null หรือ throw error ที่สื่อสารได้ชัดเจนขึ้น
-    // แต่เพื่อไม่ให้แอปพังทั้งหมด จะลอง return client เปล่าๆ หรือ handle ใน route
-    // ในที่นี้เลือก throw เพื่อให้ route handle
-    throw new Error('Supabase environment variables are missing')
+    const errorMsg = 'Supabase environment variables (NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY) are missing in environment configuration.'
+    console.error(`[Supabase Server Client] Error: ${errorMsg}`)
+    throw new Error(errorMsg)
   }
 
   return createServerClient(
@@ -29,7 +28,9 @@ export async function createClient() {
               cookieStore.set(name, value, options)
             )
           } catch {
-            // บริหารจัดการใน Server Component
+            // This catch block is expected when createClient() is called in Server Components,
+            // as cookies cannot be set during Server Component rendering.
+            // It can be safely ignored if middleware handles session refreshes.
           }
         },
       },

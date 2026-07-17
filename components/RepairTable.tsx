@@ -214,68 +214,86 @@ export default function RepairTable() {
     return (date.getMonth() + 1) === selectedMonth && date.getFullYear() === selectedYear
   })
 
-  const summary = {
-    count: monthlyData.length,
-    parts: monthlyData.reduce((sum, r) => sum + (Number(r.total_parts_cost) || 0), 0),
-    partsQty: monthlyData.reduce((sum, r) => sum + (Number(r.total_parts_qty) || 0), 0),
-    service: monthlyData.reduce((sum, r) => sum + (Number(r.service_price) || 0), 0),
-    total: monthlyData.reduce((sum, r) => sum + (Number(r.grand_total) || 0), 0),
-    // 📊 เพิ่มการจำแนกตามประเภทอุปกรณ์
-    countsByType: monthlyData.reduce((acc: any, r) => {
-      const type = r.item?.type_item || 'ไม่ระบุประเภท'
-      acc[type] = (acc[type] || 0) + 1
-      return acc
-    }, {})
+  // 1. เพิ่ม totalsByType เข้าไปใน Object summary
+const summary = {
+  count: monthlyData.length,
+  parts: monthlyData.reduce((sum, r) => sum + (Number(r.total_parts_cost) || 0), 0),
+  partsQty: monthlyData.reduce((sum, r) => sum + (Number(r.total_parts_qty) || 0), 0),
+  service: monthlyData.reduce((sum, r) => sum + (Number(r.service_price) || 0), 0),
+  total: monthlyData.reduce((sum, r) => sum + (Number(r.grand_total) || 0), 0),
+  
+  // จำแนกตามจำนวนเครื่อง
+  countsByType: monthlyData.reduce((acc: any, r) => {
+    const type = r.item?.type_item || 'ไม่ระบุประเภท';
+    acc[type] = (acc[type] || 0) + 1;
+    return acc;
+  }, {}),
+
+  // 📊 เพิ่มการจำแนกยอดรวมเงินตามประเภทอุปกรณ์
+  totalsByType: monthlyData.reduce((acc: any, r) => {
+    const type = r.item?.type_item || 'ไม่ระบุประเภท';
+    acc[type] = (acc[type] || 0) + (Number(r.grand_total) || 0);
+    return acc;
+  }, {})
+};
+
+const exportToExcel = () => {
+  try {
+    // 1. เตรียมข้อมูลสำหรับ Sheet รายละเอียด
+    const detailedData = monthlyData.map((r, index) => ({
+      'ลำดับ': index + 1,
+      'วันที่แจ้งซ่อม': new Date(r.repair_date).toLocaleDateString('th-TH'),
+      'วันที่เสร็จสิ้น': r.repair_finish ? new Date(r.repair_finish).toLocaleDateString('th-TH') : '-',
+      'ชื่อผู้แจ้ง': r.requester_name,
+      'แผนก': r.requester_dept,
+      'อุปกรณ์': r.item?.manual_brand || '-',
+      'รหัสทรัพย์สิน': r.item?.assets_number || '-',
+      'S/N': r.item?.manual_sn || '-',
+      'อาการเสีย': r.item?.problem_detail || '-',
+      'วิธีการซ่อม': r.fix_detail || '-',
+      'สถานะ': REPAIR_STATUS.find(s => s.value === r.status)?.label.split(' ')[1] || r.status,
+      'ค่าอะไหล่ (บาท)': r.total_parts_cost || 0,
+      'ค่าบริการ (บาท)': r.service_price || 0,
+      'ยอดรวมสุทธิ (บาท)': r.grand_total || 0,
+      'ช่างผู้ซ่อม': r.technician_name || '-'
+    }));
+
+    // 2. เตรียมรายการราคารวมแยกตามประเภท
+    const costByTypeRows = Object.entries(summary.totalsByType).map(([type, total]) => ({
+      'หัวข้อ': `ราคารวมประเภท: ${type}`,
+      'ข้อมูล': Number(total).toLocaleString(undefined, { minimumFractionDigits: 2 })
+    }));
+
+    // 3. เตรียมข้อมูลสำหรับ Sheet สรุปยอด
+    const summaryData = [
+      { 'หัวข้อ': 'เดือน/ปี', 'ข้อมูล': `${new Date(0, selectedMonth - 1).toLocaleString('th-TH', { month: 'long' })} ${selectedYear + 543}` },
+      { 'หัวข้อ': 'จำนวนงานซ่อมทั้งหมด', 'ข้อมูล': `${summary.count} รายการ` },
+      { 'หัวข้อ': 'รวมค่าอะไหล่', 'ข้อมูล': summary.parts.toLocaleString(undefined, { minimumFractionDigits: 2 }) },
+      { 'หัวข้อ': 'จำนวนอะไหล่ที่ใช้รวม', 'ข้อมูล': `${summary.partsQty} ชิ้น` },
+      { 'หัวข้อ': 'รวมค่าบริการ', 'ข้อมูล': summary.service.toLocaleString(undefined, { minimumFractionDigits: 2 }) },
+      ...costByTypeRows, 
+      { 'หัวข้อ': 'งบประมาณรวมทั้งสิ้น', 'ข้อมูล': summary.total.toLocaleString(undefined, { minimumFractionDigits: 2 }) },
+      { 'หัวข้อ': 'จำแนกตามจำนวนเครื่อง', 'ข้อมูล': Object.entries(summary.countsByType).map(([type, count]) => `${type}: ${count} เครื่อง`).join(', ') || 'ไม่มีข้อมูล' }
+    ];
+
+    // 4. สร้าง Workbook และเพิ่ม Sheets
+    const wb = XLSX.utils.book_new();
+    const wsSummary = XLSX.utils.json_to_sheet(summaryData);
+    const wsDetails = XLSX.utils.json_to_sheet(detailedData);
+
+    XLSX.utils.book_append_sheet(wb, wsSummary, "สรุปยอดรายเดือน");
+    XLSX.utils.book_append_sheet(wb, wsDetails, "รายละเอียดงานซ่อม");
+
+    // 5. บันทึกไฟล์
+    const fileName = `รายงานการซ่อม_${selectedMonth}_${selectedYear + 543}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+
+    Swal.fire({ icon: 'success', title: 'ส่งออกไฟล์สำเร็จ', text: fileName, timer: 2000, showConfirmButton: false });
+  } catch (err) {
+    console.error(err);
+    Swal.fire({ icon: 'error', title: 'ส่งออกล้มเหลว', text: 'เกิดข้อผิดพลาดในการสร้างไฟล์ Excel' });
   }
-
-  const exportToExcel = () => {
-    try {
-      // 1. เตรียมข้อมูลสำหรับ Sheet รายละเอียด
-      const detailedData = monthlyData.map((r, index) => ({
-        'ลำดับ': index + 1,
-        'วันที่แจ้งซ่อม': new Date(r.repair_date).toLocaleDateString('th-TH'),
-        'วันที่เสร็จสิ้น': r.repair_finish ? new Date(r.repair_finish).toLocaleDateString('th-TH') : '-',
-        'ชื่อผู้แจ้ง': r.requester_name,
-        'แผนก': r.requester_dept,
-        'อุปกรณ์': r.item?.manual_brand || '-',
-        'เลขครุภัณฑ์': r.item?.assets_number || '-',
-        'อาการเสีย': r.item?.problem_detail || '-',
-        'วิธีการซ่อม': r.fix_detail || '-',
-        'สถานะ': REPAIR_STATUS.find(s => s.value === r.status)?.label.split(' ')[1] || r.status,
-        'ค่าอะไหล่ (บาท)': r.total_parts_cost || 0,
-        'ค่าบริการ (บาท)': r.service_price || 0,
-        'ยอดรวมสุทธิ (บาท)': r.grand_total || 0,
-        'ช่างผู้ซ่อม': r.technician_name || '-'
-      }))
-
-      // 2. เตรียมข้อมูลสำหรับ Sheet สรุปยอด
-      const summaryData = [
-        { 'หัวข้อ': 'เดือน/ปี', 'ข้อมูล': `${new Date(0, selectedMonth - 1).toLocaleString('th-TH', { month: 'long' })} ${selectedYear + 543}` },
-        { 'หัวข้อ': 'จำนวนงานซ่อมทั้งหมด', 'ข้อมูล': `${summary.count} รายการ` },
-        { 'หัวข้อ': 'รวมค่าอะไหล่', 'ข้อมูล': summary.parts.toLocaleString(undefined, { minimumFractionDigits: 2 }) },
-        { 'หัวข้อ': 'จำนวนอะไหล่ที่ใช้รวม', 'ข้อมูล': `${summary.partsQty} ชิ้น` },
-        { 'หัวข้อ': 'รวมค่าบริการ', 'ข้อมูล': summary.service.toLocaleString(undefined, { minimumFractionDigits: 2 }) },
-        { 'หัวข้อ': 'งบประมาณรวมทั้งสิ้น', 'ข้อมูล': summary.total.toLocaleString(undefined, { minimumFractionDigits: 2 }) }
-      ]
-
-      // 3. สร้าง Workbook และเพิ่ม Sheets
-      const wb = XLSX.utils.book_new()
-      const wsDetails = XLSX.utils.json_to_sheet(detailedData)
-      const wsSummary = XLSX.utils.json_to_sheet(summaryData)
-
-      XLSX.utils.book_append_sheet(wb, wsSummary, "สรุปยอดรายเดือน")
-      XLSX.utils.book_append_sheet(wb, wsDetails, "รายละเอียดงานซ่อม")
-
-      // 4. บันทึกไฟล์
-      const fileName = `รายงานการซ่อม_${selectedMonth}_${selectedYear + 543}.xlsx`
-      XLSX.writeFile(wb, fileName)
-
-      Swal.fire({ icon: 'success', title: 'ส่งออกไฟล์สำเร็จ', text: fileName, timer: 2000, showConfirmButton: false })
-    } catch (err) {
-      console.error(err)
-      Swal.fire({ icon: 'error', title: 'ส่งออกล้มเหลว', text: 'เกิดข้อผิดพลาดในการสร้างไฟล์ Excel' })
-    }
-  }
+};
 
   return (
     <div className="p-6">
@@ -391,7 +409,7 @@ export default function RepairTable() {
               <th className="p-4">วันที่แจ้ง/เสร็จสิ้น</th>
               <th className="p-4">รหัสพนักงาน</th>
               <th className="p-4">ผู้แจ้งซ่อม</th>
-              <th className="p-4">เลขครุภัณฑ์</th>
+              <th className="p-4">รหัสทรัพย์สิน</th>
               <th className="p-4">เลขที่สัญญา</th>
               <th className="p-4">ประเภท</th>
               <th className="p-4">อุปกรณ์ / S/N</th>
@@ -562,7 +580,7 @@ export default function RepairTable() {
                   <span className="font-mono font-bold text-slate-600 uppercase">{repair.requester_emp_code || '-'}</span>
                 </div>
                 <div>
-                  <span className="text-[10px] text-slate-400 block">เลขครุภัณฑ์</span>
+                  <span className="text-[10px] text-slate-400 block">รหัสทรัพย์สิน</span>
                   <span className="font-mono font-bold text-amber-700">{repair.item?.assets_number || '-'}</span>
                 </div>
                 <div className="col-span-2">
@@ -698,7 +716,7 @@ export default function RepairTable() {
                 </div>
                 <div className="grid grid-cols-2 gap-3 mt-3">
                   <div>
-                    <label className="block text-xs font-bold uppercase text-slate-500 mb-1">เลขครุภัณฑ์</label>
+                    <label className="block text-xs font-bold uppercase text-slate-500 mb-1">รหัสทรัพย์สิน</label>
                     <input type="text" value={assetsNumber} onChange={(e) => setAssetsNumber(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 text-slate-800 font-mono" />
                   </div>
                   <div>
