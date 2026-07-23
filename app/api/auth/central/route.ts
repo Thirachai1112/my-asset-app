@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createAdminClient } from '@/utils/supabase/server'
+import { createClient } from '@/utils/supabase/server'
 
 export async function POST(request: Request) {
   try {
@@ -9,7 +9,7 @@ export async function POST(request: Request) {
     let finalUser = null
 
     try {
-      const supabase = await createAdminClient()
+      const supabase = await createClient()
       
       const { data: userData, error: fetchError } = await supabase
         .from('users')

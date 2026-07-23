@@ -2,9 +2,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
-// Bypass self-signed certificate errors caused by corporate SSL inspection
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'
-
 export async function createClient() {
   const cookieStore = await cookies()
 
@@ -34,40 +31,6 @@ export async function createClient() {
             // This catch block is expected when createClient() is called in Server Components,
             // as cookies cannot be set during Server Component rendering.
             // It can be safely ignored if middleware handles session refreshes.
-          }
-        },
-      },
-    }
-  )
-}
-
-export async function createAdminClient() {
-  const cookieStore = await cookies()
-
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-  if (!supabaseUrl || !supabaseServiceKey) {
-    const errorMsg = 'Supabase environment variables (NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY) are missing in environment configuration.'
-    console.error(`[Supabase Server Admin Client] Error: ${errorMsg}`)
-    throw new Error(errorMsg)
-  }
-
-  return createServerClient(
-    supabaseUrl,
-    supabaseServiceKey,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll()
-        },
-        setAll(cookiesToSet) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
-            )
-          } catch {
-            // Expected catch block for server components
           }
         },
       },
