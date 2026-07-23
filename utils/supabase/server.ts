@@ -37,3 +37,37 @@ export async function createClient() {
     }
   )
 }
+
+export async function createAdminClient() {
+  const cookieStore = await cookies()
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+  if (!supabaseUrl || !supabaseServiceKey) {
+    const errorMsg = 'Supabase environment variables (NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY) are missing in environment configuration.'
+    console.error(`[Supabase Server Admin Client] Error: ${errorMsg}`)
+    throw new Error(errorMsg)
+  }
+
+  return createServerClient(
+    supabaseUrl,
+    supabaseServiceKey,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll()
+        },
+        setAll(cookiesToSet) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
+            )
+          } catch {
+            // Expected catch block for server components
+          }
+        },
+      },
+    }
+  )
+}
