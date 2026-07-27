@@ -39,7 +39,7 @@ function RepairsContent() {
   ]
 
   return (
-    <div className="max-w-7xl mx-auto">
+    <div className="w-full px-2 sm:px-4">
       {/* Breadcrumb */}
       <div className="mb-8 flex items-center justify-between">
         <div className="flex items-center gap-2 text-sm" style={{ color: COLORS.muted }}>

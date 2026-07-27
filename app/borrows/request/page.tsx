@@ -239,7 +239,7 @@ export default function BorrowRequestPage() {
             className="min-h-screen p-3 sm:p-4 md:p-8 pb-24 md:pb-8"
             style={{ background: COLORS.bg, fontFamily: "'DM Sans', sans-serif" }}
         >
-            <div className="max-w-7xl mx-auto">
+            <div className="w-full px-2 sm:px-4">
                 {/* ===== HEADER ===== */}
                 <div
                     className="rounded-2xl p-5 sm:p-6 md:p-8 mb-6 md:mb-8 relative overflow-hidden"

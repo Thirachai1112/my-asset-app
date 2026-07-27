@@ -296,7 +296,7 @@ const exportToExcel = () => {
 };
 
   return (
-    <div className="p-6">
+    < div className="w-full px-0 sm:px-2 py-6">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
         <div>
           <h3 className="text-lg font-bold text-slate-900">Repair Management System</h3>
@@ -401,8 +401,8 @@ const exportToExcel = () => {
       </div>
 
       {/* ===== DESKTOP TABLE VIEW (hidden on small screens) ===== */}
-      <div className="hidden md:block overflow-x-auto border border-slate-200 rounded-xl bg-white shadow-sm">
-        <table className="w-full text-left border-collapse">
+      <div className="hidden md:block overflow-x-auto border border-slate-300 rounded-xl bg-white shadow-sm">
+        <table className="w-full text-left border-collapse table-fixed">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 text-xs uppercase font-bold tracking-wider">
               <th className="p-4 w-16 text-center">ลำดับ</th>
