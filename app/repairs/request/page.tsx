@@ -25,14 +25,10 @@ const COLORS = {
 
 // 🌟 กำหนดรายการประเภทอุปกรณ์สำหรับ Dropdown
 const EQUIPMENT_TYPES = [
-  "Notebook / Laptop",
-  "Desktop PC",
+  "cpu",
   "Printer",
-  "Scanner",
-  "Monitor",
-  "Projector",
-  "UPS (เครื่องสำรองไฟ)",
-  "Network Equipment (Switch/Router)",
+  "UPS",
+  "monitor",
   "อื่นๆ (ระบุเพิ่มเติมนอกเหนือจากนี้)"
 ];
 
