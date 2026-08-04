@@ -90,6 +90,7 @@ const navItems = [
   { icon: LayoutDashboard, label: "ภาพรวม", href: "/", active: true },
   { icon: Package, label: "ทรัพย์สิน", href: "/borrows" },
   { icon: Wrench, label: "งานซ่อม", href: "/repairs" },
+  { icon: Wrench, label: "ทรัพย์สินสำหรับโอน", href: "/#" },
 ]
 
 // --- Color Palette (White-Purple Theme via CSS Variables) ---
