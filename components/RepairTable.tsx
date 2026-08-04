@@ -19,8 +19,9 @@ export default function RepairTable() {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
 
-  // Filter states (Monthly Summary)
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1)
+  // 🌟 ปรับปรุง: เปลี่ยนเป็นตัวเลือกช่วงเดือน (Start Month - End Month) และปี
+  const [startMonth, setStartMonth] = useState(1) // เริ่มต้นเดือนมกราคม
+  const [endMonth, setEndMonth] = useState(new Date().getMonth() + 1) // สิ้นสุดเดือนปัจจุบัน
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
 
   // Pagination states
@@ -185,9 +186,26 @@ export default function RepairTable() {
     }
   }
 
+  // 🌟 ฟังก์ชันกรองข้อมูลตามช่วงเดือน ปี และคำค้นหา
   const filteredRepairs = repairs.filter((r) => {
+    if (!r.repair_date) return false
+
+    const repairDate = new Date(r.repair_date)
+    let rMonth = repairDate.getMonth() + 1
+    let rYear = repairDate.getFullYear()
+
+    if (rYear > 2400) {
+      rYear = rYear - 543 // รองรับกรณีฐานข้อมูลเก็บเป็นปี พ.ศ.
+    }
+
+    const matchesYear = (rYear === selectedYear)
+    const matchesMonthRange = (rMonth >= startMonth && rMonth <= endMonth)
+
+    if (!matchesYear || !matchesMonthRange) return false
+
     const searchLower = searchTerm.toLowerCase().trim()
     if (!searchLower) return true
+
     return (
       r.requester_name?.toLowerCase().includes(searchLower) ||
       r.requester_emp_code?.toLowerCase().includes(searchLower) ||
@@ -208,141 +226,156 @@ export default function RepairTable() {
 
   if (loading) return <div className="p-12 text-center text-slate-400 animate-pulse">กำลังโหลดข้อมูลการซ่อม...</div>
 
-  // คำนวณสรุปยอดรายเดือน (เฉพาะข้อมูลที่กรองตามเดือน/ปี)
-  const monthlyData = repairs.filter(r => {
-    const date = new Date(r.repair_date)
-    return (date.getMonth() + 1) === selectedMonth && date.getFullYear() === selectedYear
-  })
+  // ข้อมูลสรุปใช้ชุดเดียวกับ filteredRepairs เพื่อความถูกต้องตรงกัน
+  const monthlyData = filteredRepairs
 
-  // 1. เพิ่ม totalsByType เข้าไปใน Object summary
-const summary = {
-  count: monthlyData.length,
-  parts: monthlyData.reduce((sum, r) => sum + (Number(r.total_parts_cost) || 0), 0),
-  partsQty: monthlyData.reduce((sum, r) => sum + (Number(r.total_parts_qty) || 0), 0),
-  service: monthlyData.reduce((sum, r) => sum + (Number(r.service_price) || 0), 0),
-  total: monthlyData.reduce((sum, r) => sum + (Number(r.grand_total) || 0), 0),
-  
-  // จำแนกตามจำนวนเครื่อง
-  countsByType: monthlyData.reduce((acc: any, r) => {
-    const type = r.item?.type_item || 'ไม่ระบุประเภท';
-    acc[type] = (acc[type] || 0) + 1;
-    return acc;
-  }, {}),
+  const summary = {
+    count: monthlyData.length,
+    parts: monthlyData.reduce((sum, r) => sum + (Number(r.total_parts_cost) || 0), 0),
+    partsQty: monthlyData.reduce((sum, r) => sum + (Number(r.total_parts_qty) || 0), 0),
+    service: monthlyData.reduce((sum, r) => sum + (Number(r.service_price) || 0), 0),
+    total: monthlyData.reduce((sum, r) => sum + (Number(r.grand_total) || 0), 0),
+    
+    countsByType: monthlyData.reduce((acc: any, r) => {
+      const type = r.item?.type_item || 'ไม่ระบุประเภท';
+      acc[type] = (acc[type] || 0) + 1;
+      return acc;
+    }, {}),
 
-  // 📊 เพิ่มการจำแนกยอดรวมเงินตามประเภทอุปกรณ์
-  totalsByType: monthlyData.reduce((acc: any, r) => {
-    const type = r.item?.type_item || 'ไม่ระบุประเภท';
-    acc[type] = (acc[type] || 0) + (Number(r.grand_total) || 0);
-    return acc;
-  }, {})
-};
+    totalsByType: monthlyData.reduce((acc: any, r) => {
+      const type = r.item?.type_item || 'ไม่ระบุประเภท';
+      acc[type] = (acc[type] || 0) + (Number(r.grand_total) || 0);
+      return acc;
+    }, {})
+  };
 
-const exportToExcel = () => {
-  try {
-    // 1. เตรียมข้อมูลสำหรับ Sheet รายละเอียด
-    const detailedData = monthlyData.map((r, index) => ({
-      'ลำดับ': index + 1,
-      'วันที่แจ้งซ่อม': new Date(r.repair_date).toLocaleDateString('th-TH'),
-      'วันที่เสร็จสิ้น': r.repair_finish ? new Date(r.repair_finish).toLocaleDateString('th-TH') : '-',
-      'ชื่อผู้แจ้ง': r.requester_name,
-      'แผนก': r.requester_dept,
-      'อุปกรณ์': r.item?.manual_brand || '-',
-      'รหัสทรัพย์สิน': r.item?.assets_number || '-',
-      'S/N': r.item?.manual_sn || '-',
-      'อาการเสีย': r.item?.problem_detail || '-',
-      'วิธีการซ่อม': r.fix_detail || '-',
-      'สถานะ': REPAIR_STATUS.find(s => s.value === r.status)?.label.split(' ')[1] || r.status,
-      'ค่าอะไหล่ (บาท)': r.total_parts_cost || 0,
-      'ค่าบริการ (บาท)': r.service_price || 0,
-      'ยอดรวมสุทธิ (บาท)': r.grand_total || 0,
-      'ช่างผู้ซ่อม': r.technician_name || '-'
-    }));
+  const exportToExcel = () => {
+    try {
+      const startMonthName = new Date(0, startMonth - 1).toLocaleString('th-TH', { month: 'long' });
+      const endMonthName = new Date(0, endMonth - 1).toLocaleString('th-TH', { month: 'long' });
+      const rangeText = startMonth === endMonth ? `${startMonthName} ${selectedYear + 543}` : `${startMonthName} - ${endMonthName} ${selectedYear + 543}`;
 
-    // 2. เตรียมรายการราคารวมแยกตามประเภท
-    const costByTypeRows = Object.entries(summary.totalsByType).map(([type, total]) => ({
-      'หัวข้อ': `ราคารวมประเภท: ${type}`,
-      'ข้อมูล': Number(total).toLocaleString(undefined, { minimumFractionDigits: 2 })
-    }));
+      const detailedData = monthlyData.map((r, index) => ({
+        'ลำดับ': index + 1,
+        'วันที่แจ้งซ่อม': new Date(r.repair_date).toLocaleDateString('th-TH'),
+        'วันที่เสร็จสิ้น': r.repair_finish ? new Date(r.repair_finish).toLocaleDateString('th-TH') : '-',
+        'ชื่อผู้แจ้ง': r.requester_name,
+        'แผนก': r.requester_dept,
+        'อุปกรณ์': r.item?.manual_brand || '-',
+        'รหัสทรัพย์สิน': r.item?.assets_number || '-',
+        'S/N': r.item?.manual_sn || '-',
+        'อาการเสีย': r.item?.problem_detail || '-',
+        'วิธีการซ่อม': r.fix_detail || '-',
+        'สถานะ': REPAIR_STATUS.find(s => s.value === r.status)?.label.split(' ')[1] || r.status,
+        'ค่าอะไหล่ (บาท)': r.total_parts_cost || 0,
+        'ค่าบริการ (บาท)': r.service_price || 0,
+        'ยอดรวมสุทธิ (บาท)': r.grand_total || 0,
+        'ช่างผู้ซ่อม': r.technician_name || '-'
+      }));
 
-    // 3. เตรียมข้อมูลสำหรับ Sheet สรุปยอด
-    const summaryData = [
-      { 'หัวข้อ': 'เดือน/ปี', 'ข้อมูล': `${new Date(0, selectedMonth - 1).toLocaleString('th-TH', { month: 'long' })} ${selectedYear + 543}` },
-      { 'หัวข้อ': 'จำนวนงานซ่อมทั้งหมด', 'ข้อมูล': `${summary.count} รายการ` },
-      { 'หัวข้อ': 'รวมค่าอะไหล่', 'ข้อมูล': summary.parts.toLocaleString(undefined, { minimumFractionDigits: 2 }) },
-      { 'หัวข้อ': 'จำนวนอะไหล่ที่ใช้รวม', 'ข้อมูล': `${summary.partsQty} ชิ้น` },
-      { 'หัวข้อ': 'รวมค่าบริการ', 'ข้อมูล': summary.service.toLocaleString(undefined, { minimumFractionDigits: 2 }) },
-      ...costByTypeRows, 
-      { 'หัวข้อ': 'งบประมาณรวมทั้งสิ้น', 'ข้อมูล': summary.total.toLocaleString(undefined, { minimumFractionDigits: 2 }) },
-      { 'หัวข้อ': 'จำแนกตามจำนวนเครื่อง', 'ข้อมูล': Object.entries(summary.countsByType).map(([type, count]) => `${type}: ${count} เครื่อง`).join(', ') || 'ไม่มีข้อมูล' }
-    ];
+      const costByTypeRows = Object.entries(summary.totalsByType).map(([type, total]) => ({
+        'หัวข้อ': `ราคารวมประเภท: ${type}`,
+        'ข้อมูล': Number(total).toLocaleString(undefined, { minimumFractionDigits: 2 })
+      }));
 
-    // 4. สร้าง Workbook และเพิ่ม Sheets
-    const wb = XLSX.utils.book_new();
-    const wsSummary = XLSX.utils.json_to_sheet(summaryData);
-    const wsDetails = XLSX.utils.json_to_sheet(detailedData);
+      const summaryData = [
+        { 'หัวข้อ': 'ช่วงเวลาของรายงาน', 'ข้อมูล': rangeText },
+        { 'หัวข้อ': 'จำนวนงานซ่อมทั้งหมด', 'ข้อมูล': `${summary.count} รายการ` },
+        { 'หัวข้อ': 'รวมค่าอะไหล่', 'ข้อมูล': summary.parts.toLocaleString(undefined, { minimumFractionDigits: 2 }) },
+        { 'หัวข้อ': 'จำนวนอะไหล่ที่ใช้รวม', 'ข้อมูล': `${summary.partsQty} ชิ้น` },
+        { 'หัวข้อ': 'รวมค่าบริการ', 'ข้อมูล': summary.service.toLocaleString(undefined, { minimumFractionDigits: 2 }) },
+        ...costByTypeRows, 
+        { 'หัวข้อ': 'งบประมาณรวมทั้งสิ้น', 'ข้อมูล': summary.total.toLocaleString(undefined, { minimumFractionDigits: 2 }) },
+        { 'หัวข้อ': 'จำแนกตามจำนวนเครื่อง', 'ข้อมูล': Object.entries(summary.countsByType).map(([type, count]) => `${type}: ${count} เครื่อง`).join(', ') || 'ไม่มีข้อมูล' }
+      ];
 
-    XLSX.utils.book_append_sheet(wb, wsSummary, "สรุปยอดรายเดือน");
-    XLSX.utils.book_append_sheet(wb, wsDetails, "รายละเอียดงานซ่อม");
+      const wb = XLSX.utils.book_new();
+      const wsSummary = XLSX.utils.json_to_sheet(summaryData);
+      const wsDetails = XLSX.utils.json_to_sheet(detailedData);
 
-    // 5. บันทึกไฟล์
-    const fileName = `รายงานการซ่อม_${selectedMonth}_${selectedYear + 543}.xlsx`;
-    XLSX.writeFile(wb, fileName);
+      XLSX.utils.book_append_sheet(wb, wsSummary, "สรุปยอดช่วงเวลา");
+      XLSX.utils.book_append_sheet(wb, wsDetails, "รายละเอียดงานซ่อม");
 
-    Swal.fire({ icon: 'success', title: 'ส่งออกไฟล์สำเร็จ', text: fileName, timer: 2000, showConfirmButton: false });
-  } catch (err) {
-    console.error(err);
-    Swal.fire({ icon: 'error', title: 'ส่งออกล้มเหลว', text: 'เกิดข้อผิดพลาดในการสร้างไฟล์ Excel' });
-  }
-};
+      const fileName = `รายงานการซ่อม_${startMonth}_ถึง_${endMonth}_${selectedYear + 543}.xlsx`;
+      XLSX.writeFile(wb, fileName);
+
+      Swal.fire({ icon: 'success', title: 'ส่งออกไฟล์สำเร็จ', text: fileName, timer: 2000, showConfirmButton: false });
+    } catch (err) {
+      console.error(err);
+      Swal.fire({ icon: 'error', title: 'ส่งออกล้มเหลว', text: 'เกิดข้อผิดพลาดในการสร้างไฟล์ Excel' });
+    }
+  };
+
+  const totalQuantity = filteredRepairs.length
 
   return (
-    < div className="w-full px-0 sm:px-2 py-6">
+    <div className="w-full px-0 sm:px-2 py-6">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
         <div>
           <h3 className="text-lg font-bold text-slate-900">Repair Management System</h3>
-          <p className="text-xs text-slate-400">พบรายการแจ้งซ่อมทั้งหมด {filteredRepairs.length} รายการ</p>
+          <p className="text-xs text-slate-400">พบรายการแจ้งซ่อมตามเงื่อนไข {filteredRepairs.length} รายการ</p>
         </div>
       </div>
 
-      {/* 📊 Monthly Dashboard Section */}
+      {/* 📊 Dashboard & Range Filter Section */}
       <div className="bg-white border border-slate-200 rounded-2xl p-6 mb-8 shadow-sm">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-blue-600 rounded-lg text-white">📈</div>
             <div>
-              <h4 className="font-bold text-slate-800">สรุปยอดการซ่อมรายเดือน</h4>
+              <h4 className="font-bold text-slate-800">สรุปยอดการซ่อมตามช่วงเวลา</h4>
               <p className="text-[10px] text-slate-400 uppercase tracking-wider">Financial & Repair Analytics</p>
             </div>
           </div>
           
+          {/* 🌟 Month Range & Year Controls */}
           <div className="flex flex-wrap items-center gap-2">
-            <button 
-              onClick={exportToExcel}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-md shadow-emerald-100 flex items-center gap-2"
-            >
-              <span>📊</span> Export to Excel
-            </button>
-            <div className="h-8 w-px bg-slate-200 mx-2 hidden md:block"></div>
-            <select 
-              value={selectedMonth} 
-              onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
-              className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 outline-none focus:border-blue-500"
-            >
-              {Array.from({ length: 12 }, (_, i) => (
-                <option key={i + 1} value={i + 1}>
-                  {new Date(0, i).toLocaleString('th-TH', { month: 'long' })}
-                </option>
-              ))}
-            </select>
+            <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5">
+              <span className="text-[10px] font-bold text-slate-500 uppercase">จาก:</span>
+              <select 
+                value={startMonth} 
+                onChange={(e) => setStartMonth(parseInt(e.target.value))}
+                className="bg-transparent text-xs font-bold text-slate-700 outline-none cursor-pointer"
+              >
+                {Array.from({ length: 12 }, (_, i) => (
+                  <option key={i + 1} value={i + 1}>
+                    {new Date(0, i).toLocaleString('th-TH', { month: 'long' })}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5">
+              <span className="text-[10px] font-bold text-slate-500 uppercase">ถึง:</span>
+              <select 
+                value={endMonth} 
+                onChange={(e) => setEndMonth(parseInt(e.target.value))}
+                className="bg-transparent text-xs font-bold text-slate-700 outline-none cursor-pointer"
+              >
+                {Array.from({ length: 12 }, (_, i) => (
+                  <option key={i + 1} value={i + 1}>
+                    {new Date(0, i).toLocaleString('th-TH', { month: 'long' })}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             <select 
               value={selectedYear} 
               onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-              className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 outline-none focus:border-blue-500"
+              className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 outline-none cursor-pointer"
             >
               {[2024, 2025, 2026, 2027].map(y => (
                 <option key={y} value={y}>{y + 543}</option>
               ))}
             </select>
+
+            <button 
+              onClick={exportToExcel}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-md shadow-emerald-100 flex items-center gap-2"
+            >
+              <span>📊</span> Export Excel
+            </button>
           </div>
         </div>
 
@@ -371,7 +404,7 @@ const exportToExcel = () => {
 
         {/* 📋 จำแนกตามประเภท (Unit Breakdown) */}
         <div className="mt-6 pt-6 border-t border-slate-100">
-          <p className="text-[10px] font-bold text-slate-400 uppercase mb-3 tracking-widest">จำแนกตามประเภทอุปกรณ์ (ยอดรวมรายเดือน)</p>
+          <p className="text-[10px] font-bold text-slate-400 uppercase mb-3 tracking-widest">จำแนกตามประเภทอุปกรณ์ (ตามช่วงเวลาที่เลือก)</p>
           <div className="flex flex-wrap gap-2">
             {Object.entries(summary.countsByType).map(([type, count]: [string, any]) => (
               <div key={type} className="bg-white border border-slate-200 px-3 py-1.5 rounded-xl flex items-center gap-2 shadow-sm">
@@ -381,13 +414,13 @@ const exportToExcel = () => {
               </div>
             ))}
             {Object.keys(summary.countsByType).length === 0 && (
-              <p className="text-xs text-slate-400 italic">ไม่มีข้อมูลการซ่อมในเดือนนี้</p>
+              <p className="text-xs text-slate-400 italic">ไม่มีข้อมูลการซ่อมในช่วงเวลาดังกล่าว</p>
             )}
           </div>
         </div>
       </div>
 
-      <div className="mb-6">
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="relative max-w-md w-full">
           <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">🔍</span>
           <input
@@ -398,10 +431,14 @@ const exportToExcel = () => {
             className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-4 py-2 text-sm focus:outline-none text-slate-800"
           />
         </div>
+        <div className="min-w-0">
+          <h3 className="text-lg font-bold text-slate-900 truncate">ประวัติการซ่อม</h3>
+          <p className="text-xs text-slate-500">แสดงผล {filteredRepairs.length} รายการจากช่วงเวลาที่เลือก</p>
+        </div>
       </div>
 
-      {/* ===== DESKTOP TABLE VIEW (hidden on small screens) ===== */}
-      <div className="hidden md:block overflow-x-auto border border-slate-300 rounded-xl bg-white shadow-sm">
+      {/* ===== DESKTOP TABLE VIEW ===== */}
+      <div className="hidden md:block overflow-x-auto border border-slate-300 rounded-xl bg-white shadow-sm mb-6">
         <table className="w-full text-left border-collapse table-fixed">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 text-xs uppercase font-bold tracking-wider">
@@ -531,22 +568,21 @@ const exportToExcel = () => {
               ))
             ) : (
               <tr>
-                <td colSpan={13} className="p-8 text-center text-slate-400">❌ ไม่พบข้อมูลการซ่อม</td>
+                <td colSpan={14} className="p-8 text-center text-slate-400">❌ ไม่พบข้อมูลการซ่อมในขอบเขตเวลาที่เลือก</td>
               </tr>
             )}
           </tbody>
         </table>
       </div>
 
-      {/* ===== MOBILE CARD VIEW (shown on small screens) ===== */}
-      <div className="md:hidden space-y-3">
+      {/* ===== MOBILE CARD VIEW ===== */}
+      <div className="md:hidden space-y-3 mb-6">
         {currentRepairs.length > 0 ? (
           currentRepairs.map((repair, index) => (
             <div
               key={repair.id}
               className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm space-y-3"
             >
-              {/* Header: Index + Status */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] font-mono text-slate-400 bg-slate-50 px-2 py-0.5 rounded-md">
@@ -563,7 +599,6 @@ const exportToExcel = () => {
                 </div>
               </div>
 
-              {/* Info Grid */}
               <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
                 <div>
                   <span className="text-[10px] text-slate-400 block">วันที่แจ้ง</span>
@@ -605,9 +640,7 @@ const exportToExcel = () => {
                 )}
               </div>
 
-              {/* Actions */}
               <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100">
-                {/* Document */}
                 <div className="flex items-center gap-1">
                   {repair.file_url ? (
                     <>
@@ -626,119 +659,183 @@ const exportToExcel = () => {
 
                 <div className="flex-1"></div>
 
-                {/* Action Buttons */}
                 <button onClick={() => generateRepairPDF(repair)}
                   className="bg-slate-50 text-slate-600 hover:bg-slate-100 px-2 py-1 rounded text-[10px] font-bold border border-slate-200">
                   🖨️ ใบซ่อม
                 </button>
                 <button onClick={() => generateRepairPDFquick(repair)}
                   className="bg-slate-50 text-slate-600 hover:bg-slate-100 px-2 py-1 rounded text-[10px] font-bold border border-slate-200">
-                  🖨️ ด่วน
+                  🖨️ ใบซ่อมด่วน
                 </button>
                 <button onClick={() => openModal(repair)}
                   className="bg-blue-50 text-blue-600 hover:bg-blue-100 px-2 py-1 rounded text-[10px] font-bold border border-blue-200">
-                  📝
+                  📝 แก้ไข
                 </button>
                 <button onClick={() => handleDelete(repair.id)}
                   className="bg-red-50 text-red-600 hover:bg-red-100 px-2 py-1 rounded text-[10px] font-bold border border-red-200">
-                  🗑️
+                  🗑️ ลบ
                 </button>
               </div>
             </div>
           ))
         ) : (
-          <div className="p-8 text-center text-slate-400 bg-white border border-slate-200 rounded-xl">
-            ❌ ไม่พบข้อมูลการซ่อม
+          <div className="bg-white border border-slate-200 rounded-xl p-8 text-center text-slate-400">
+            ❌ ไม่พบข้อมูลการซ่อมในขอบเขตเวลาที่เลือก
           </div>
         )}
       </div>
 
-      {/* Pagination */}
+      {/* ===== PAGINATION CONTROLS ===== */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-center space-x-2 mt-4">
-          <button onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} disabled={currentPage === 1} className="px-3 py-1 border rounded disabled:opacity-50">ก่อนหน้า</button>
-          <span className="text-sm font-medium">หน้า {currentPage} / {totalPages}</span>
-          <button onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))} disabled={currentPage === totalPages} className="px-3 py-1 border rounded disabled:opacity-50">ถัดไป</button>
+        <div className="flex items-center justify-between px-4 py-3 bg-white border border-slate-200 rounded-xl shadow-sm">
+          <p className="text-xs text-slate-500">
+            แสดงหน้า <span className="font-bold text-slate-800">{currentPage}</span> จาก <span className="font-bold text-slate-800">{totalPages}</span>
+          </p>
+          <div className="flex gap-2">
+            <button
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              className="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            >
+              ◀️ ก่อนหน้า
+            </button>
+            <button
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              className="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            >
+              ถัดไป ▶️
+            </button>
+          </div>
         </div>
       )}
 
-      {/* Modal สำหรับการแก้ไข (Edit Only) */}
+      {/* ===== EDIT REPAIR MODAL ===== */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-xl overflow-hidden max-h-[90vh] flex flex-col">
-            <div className="bg-slate-50 border-b px-6 py-4 flex justify-between items-center shrink-0">
-              <h4 className="font-bold text-slate-900">📝 แก้ไขข้อมูลการซ่อม</h4>
-              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600 text-xl">×</button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl overflow-y-auto max-h-[90vh] space-y-4">
+            <div className="flex justify-between items-center border-b pb-3">
+              <h3 className="text-lg font-bold text-slate-800">📝 แก้ไขข้อมูลการแจ้งซ่อม #{editingRepair?.id}</h3>
+              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600 font-bold text-xl">✕</button>
             </div>
-            
-            <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto">
-              <div>
-                <label className="block text-xs font-bold uppercase text-slate-500 mb-1">สถานะการซ่อม</label>
-                <select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 text-slate-800">
-                  {REPAIR_STATUS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-                </select>
-              </div>
 
-              <div className="border-t border-slate-100 pt-4">
-                <h5 className="text-[10px] font-bold text-slate-400 uppercase mb-3 tracking-widest">ข้อมูลผู้แจ้งซ่อม</h5>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-bold uppercase text-slate-500 mb-1">ชื่อผู้แจ้ง</label>
-                    <input type="text" value={requesterName} onChange={(e) => setRequesterName(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 text-slate-800" />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-bold uppercase text-slate-500 mb-1">รหัสพนักงาน</label>
-                      <input type="text" value={requesterEmpCode} onChange={(e) => setRequesterEmpCode(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 text-slate-800" />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold uppercase text-slate-500 mb-1">ตำแหน่ง</label>
-                      <input type="text" value={requesterPosition} onChange={(e) => setRequesterPosition(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 text-slate-800" />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-bold uppercase text-slate-500 mb-1">แผนก</label>
-                      <input type="text" value={requesterDept} onChange={(e) => setRequesterDept(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 text-slate-800" />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold uppercase text-slate-500 mb-1">เบอร์โทร</label>
-                      <input type="text" value={requesterPhone} onChange={(e) => setRequesterPhone(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 text-slate-800" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="border-t border-slate-100 pt-4">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold uppercase text-slate-500 mb-1">ประเภทอุปกรณ์</label>
-                  <input type="text" value={typeItem} onChange={(e) => setTypeItem(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 text-slate-800" />
+                  <label className="block text-xs font-bold text-slate-600 mb-1">ชื่อผู้แจ้งซ่อม</label>
+                  <input
+                    type="text"
+                    value={requesterName}
+                    onChange={(e) => setRequesterName(e.target.value)}
+                    className="w-full border rounded-xl p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
                 </div>
-                <div className="grid grid-cols-2 gap-3 mt-3">
-                  <div>
-                    <label className="block text-xs font-bold uppercase text-slate-500 mb-1">รหัสทรัพย์สิน</label>
-                    <input type="text" value={assetsNumber} onChange={(e) => setAssetsNumber(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 text-slate-800 font-mono" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold uppercase text-slate-500 mb-1">เลขที่สัญญา</label>
-                    <input type="text" value={manualContract} onChange={(e) => setManualContract(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 text-slate-800 font-mono" />
-                  </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 mb-1">รหัสพนักงาน</label>
+                  <input
+                    type="text"
+                    value={requesterEmpCode}
+                    onChange={(e) => setRequesterEmpCode(e.target.value)}
+                    className="w-full border rounded-xl p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 mb-1">แผนก/ฝ่าย</label>
+                  <input
+                    type="text"
+                    value={requesterDept}
+                    onChange={(e) => setRequesterDept(e.target.value)}
+                    className="w-full border rounded-xl p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 mb-1">ตำแหน่ง</label>
+                  <input
+                    type="text"
+                    value={requesterPosition}
+                    onChange={(e) => setRequesterPosition(e.target.value)}
+                    className="w-full border rounded-xl p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 mb-1">เบอร์โทรศัพท์</label>
+                  <input
+                    type="text"
+                    value={requesterPhone}
+                    onChange={(e) => setRequesterPhone(e.target.value)}
+                    className="w-full border rounded-xl p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 mb-1">สถานะงานซ่อม</label>
+                  <select
+                    value={status}
+                    onChange={(e) => setStatus(e.target.value)}
+                    className="w-full border rounded-xl p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none font-bold"
+                  >
+                    {REPAIR_STATUS.map(s => (
+                      <option key={s.value} value={s.value}>{s.label}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
-              <div className="border-t border-slate-100 pt-4">
-                <label className="block text-xs font-bold uppercase text-slate-500 mb-1">อาการเสีย (แก้ไข)</label>
+              <hr className="border-slate-100" />
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 mb-1">รหัสทรัพย์สิน</label>
+                  <input
+                    type="text"
+                    value={assetsNumber}
+                    onChange={(e) => setAssetsNumber(e.target.value)}
+                    className="w-full border rounded-xl p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 mb-1">เลขที่สัญญา</label>
+                  <input
+                    type="text"
+                    value={manualContract}
+                    onChange={(e) => setManualContract(e.target.value)}
+                    className="w-full border rounded-xl p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 mb-1">ประเภทอุปกรณ์</label>
+                  <input
+                    type="text"
+                    value={typeItem}
+                    onChange={(e) => setTypeItem(e.target.value)}
+                    className="w-full border rounded-xl p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-600 mb-1">อาการเสีย / รายละเอียด</label>
                 <textarea
+                  rows={3}
                   value={problemDetail}
                   onChange={(e) => setProblemDetail(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:border-blue-500 text-slate-800"
-                  rows={3}
+                  className="w-full border rounded-xl p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                 />
               </div>
 
-              <div className="flex space-x-3 pt-4 border-t sticky bottom-0 bg-white shrink-0">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold py-2 rounded-xl text-sm transition-colors">ยกเลิก</button>
-                <button type="submit" className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-xl text-sm shadow-sm transition-colors">บันทึกการแก้ไข</button>
+              <div className="flex justify-end gap-2 pt-4 border-t">
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs rounded-xl transition-all"
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md transition-all"
+                >
+                  💾 บันทึกการเปลี่ยนแปลง
+                </button>
               </div>
             </form>
           </div>

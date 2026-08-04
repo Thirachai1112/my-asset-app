@@ -23,6 +23,19 @@ const COLORS = {
     emerald: "#10b981",
 };
 
+// 🌟 กำหนดรายการประเภทอุปกรณ์สำหรับ Dropdown
+const EQUIPMENT_TYPES = [
+  "Notebook / Laptop",
+  "Desktop PC",
+  "Printer",
+  "Scanner",
+  "Monitor",
+  "Projector",
+  "UPS (เครื่องสำรองไฟ)",
+  "Network Equipment (Switch/Router)",
+  "อื่นๆ (ระบุเพิ่มเติมนอกเหนือจากนี้)"
+];
+
 export default function NewRepairPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
@@ -39,7 +52,10 @@ export default function NewRepairPage() {
   const [manualSN, setManualSN] = useState('')
   const [assetsNumber, setAssetsNumber] = useState('')
   const [manualContract, setManualContract] = useState('')
+  
+  // 🌟 เพิ่ม State สำหรับจัดการประเภทอุปกรณ์และการพิมพ์กรณีเลือก "อื่นๆ"
   const [typeItem, setTypeItem] = useState('')
+  const [customTypeItem, setCustomTypeItem] = useState('')
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -48,6 +64,9 @@ export default function NewRepairPage() {
       Swal.fire({ icon: 'warning', title: 'คำเตือน', text: 'กรุณากรอกชื่ออุปกรณ์และอาการเสีย' })
       return
     }
+
+    // กำหนดค่าประเภทอุปกรณ์จริง (ถ้าเลือก "อื่นๆ" ให้ดึงค่าจากช่องพิมพ์เอง)
+    const finalTypeItem = typeItem.startsWith("อื่นๆ") ? customTypeItem : typeItem
 
     setLoading(true)
     const bodyData = {
@@ -61,7 +80,7 @@ export default function NewRepairPage() {
       manual_sn: manualSN || null,
       assets_number: assetsNumber || null,
       manual_contract: manualContract || null,
-      type_item: typeItem || null
+      type_item: finalTypeItem || null
     }
 
     try {
@@ -273,23 +292,50 @@ export default function NewRepairPage() {
                 ข้อมูลอุปกรณ์ที่มีปัญหา
               </h5>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div>
+                {/* 🌟 ปรับปรุง: ประเภทอุปกรณ์ เปลี่ยนเป็น Dropdown */}
+                <div className="md:col-span-2">
                   <label className="block text-xs font-semibold mb-1.5" style={{ color: COLORS.muted }}>
                     ประเภทอุปกรณ์
                   </label>
-                  <input
-                    type="text"
+                  <select
                     value={typeItem}
                     onChange={(e) => setTypeItem(e.target.value)}
-                    placeholder="เช่น Notebook, Printer"
-                    className="w-full rounded-xl px-4 py-2.5 text-sm transition-all outline-none"
+                    className="w-full rounded-xl px-4 py-2.5 text-sm transition-all outline-none cursor-pointer"
                     style={{
                       background: COLORS.bg,
                       border: `1px solid ${COLORS.primaryBorder}`,
                       color: COLORS.text,
                     }}
-                  />
+                  >
+                    <option value="">-- กรุณาเลือกประเภทอุปกรณ์ --</option>
+                    {EQUIPMENT_TYPES.map((type, idx) => (
+                      <option key={idx} value={type}>{type}</option>
+                    ))}
+                  </select>
                 </div>
+
+                {/* ช่องกรอกเพิ่มเติมกรณีเลือก "อื่นๆ" */}
+                {typeItem.startsWith("อื่นๆ") && (
+                  <div className="md:col-span-2">
+                    <label className="block text-xs font-semibold mb-1.5" style={{ color: COLORS.muted }}>
+                      ระบุประเภทอุปกรณ์เพิ่มเติม <span style={{ color: COLORS.red }}>*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={customTypeItem}
+                      onChange={(e) => setCustomTypeItem(e.target.value)}
+                      placeholder="ระบุชื่อประเภทอุปกรณ์ของคุณ..."
+                      className="w-full rounded-xl px-4 py-2.5 text-sm transition-all outline-none"
+                      style={{
+                        background: COLORS.bg,
+                        border: `1px solid ${COLORS.primaryBorder}`,
+                        color: COLORS.text,
+                      }}
+                      required
+                    />
+                  </div>
+                )}
+
                 <div>
                   <label className="block text-xs font-semibold mb-1.5" style={{ color: COLORS.muted }}>
                     ชื่ออุปกรณ์ / ยี่ห้อ / รุ่น <span style={{ color: COLORS.red }}>*</span>
@@ -342,7 +388,7 @@ export default function NewRepairPage() {
                     }}
                   />
                 </div>
-                <div className="md:col-span-2">
+                <div>
                   <label className="block text-xs font-semibold mb-1.5" style={{ color: COLORS.muted }}>
                     เลขสัญญา
                   </label>
