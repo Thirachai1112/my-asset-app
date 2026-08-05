@@ -281,9 +281,7 @@ export default function RepairTable() {
       const summaryData = [
         { 'หัวข้อ': 'ช่วงเวลาของรายงาน', 'ข้อมูล': rangeText },
         { 'หัวข้อ': 'จำนวนงานซ่อมทั้งหมด', 'ข้อมูล': `${summary.count} รายการ` },
-        { 'หัวข้อ': 'รวมค่าอะไหล่', 'ข้อมูล': summary.parts.toLocaleString(undefined, { minimumFractionDigits: 2 }) },
-        { 'หัวข้อ': 'จำนวนอะไหล่ที่ใช้รวม', 'ข้อมูล': `${summary.partsQty} ชิ้น` },
-        { 'หัวข้อ': 'รวมค่าบริการ', 'ข้อมูล': summary.service.toLocaleString(undefined, { minimumFractionDigits: 2 }) },
+        { 'หัวข้อ': 'จำนวนอะไหล่สำรองในแผนกที่ใช้รวม', 'ข้อมูล': `${summary.partsQty} ชิ้น` },
         ...costByTypeRows, 
         { 'หัวข้อ': 'งบประมาณรวมทั้งสิ้น', 'ข้อมูล': summary.total.toLocaleString(undefined, { minimumFractionDigits: 2 }) },
         { 'หัวข้อ': 'จำแนกตามจำนวนเครื่อง', 'ข้อมูล': Object.entries(summary.countsByType).map(([type, count]) => `${type}: ${count} เครื่อง`).join(', ') || 'ไม่มีข้อมูล' }
