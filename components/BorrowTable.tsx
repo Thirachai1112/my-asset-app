@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react'
 import Swal from 'sweetalert2'
 import { createBrowserClient } from '@supabase/ssr'
 import type { Borrow, BorrowSessionGroup } from '@/types'
+import { ASSET_TYPE_OPTIONS } from '@/types'
 import { showSuccess, showError, confirmAction } from '@/utils/helpers'
 import { usePagination } from '@/hooks/usePagination'
 import SearchInput from '@/components/ui/SearchInput'
@@ -32,6 +33,7 @@ export default function BorrowTable() {
   const [searchTerm, setSearchTerm] = useState('')
   const [uploadingId, setUploadingId] = useState<number | null>(null)
   const [selectedMonth, setSelectedMonth] = useState<string>('all')
+  const [selectedType, setSelectedType] = useState<string>('all')
 
   // 🔔 State สำหรับเก็บรายการที่ต้องตามงาน
   const [urgentItems, setUrgentItems] = useState<Borrow[]>([])
@@ -536,6 +538,11 @@ export default function BorrowTable() {
       if (key !== selectedMonth) return false
     }
 
+    // กรองตามประเภท
+    if (selectedType !== 'all') {
+      if (borrow.assets?.type !== selectedType) return false
+    }
+
     // กรองตามคำค้นหา
     const searchLower = searchTerm.toLowerCase().trim()
     if (!searchLower) return true
@@ -639,6 +646,23 @@ export default function BorrowTable() {
               </option>
             ))}
           </select>
+
+          {/* 📁 Type Filter */}
+          <select
+            value={selectedType}
+            onChange={(e) => {
+              setSelectedType(e.target.value)
+              setCurrentPage(1)
+            }}
+            className="sm:ml-2 px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-700 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all shadow-sm cursor-pointer w-full sm:w-auto"
+          >
+            <option value="all">📁 ทุกประเภท</option>
+            {ASSET_TYPE_OPTIONS.map((item) => (
+              <option key={item.value} value={item.value}>
+                {item.label}
+              </option>
+            ))}
+          </select>
         </div>
 
         <SearchInput
@@ -660,6 +684,7 @@ export default function BorrowTable() {
                 <th className="px-2 sm:px-4 py-3 sm:py-4 text-center w-10 sm:w-16">#</th>
                 <th className="px-2 sm:px-4 py-3 sm:py-4">ข้อมูลผู้ยืม</th>
                 <th className="px-2 sm:px-4 py-3 sm:py-4">อุปกรณ์</th>
+                <th className='px-2 sm:px-4 py-3 sm:py-4 text-center'>ประเภท</th>
                 <th className="px-2 sm:px-4 py-3 sm:py-4 text-center">จำนวน</th>
                 <th className="px-2 sm:px-4 py-3 sm:py-4">วันที่ทำรายการ</th>
                 <th className="px-2 sm:px-4 py-3 sm:py-4 text-center">สถานะ</th>
@@ -715,11 +740,17 @@ export default function BorrowTable() {
                           </div>
                         </div>
                       </td>
+                      <td className="px-2 sm:px-4 py-3 sm:py-5 text-center">  
+                      <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-slate-100 text-slate-600 rounded-lg text-[10px] sm:text-xs font-bold border border-slate-200 whitespace-nowrap">
+                        {borrow.assets?.type || '-'}
+                      </span>
+                    </td>
                       <td className="px-2 sm:px-4 py-3 sm:py-5 text-center">
                         <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-slate-100 text-slate-600 rounded-lg text-[10px] sm:text-xs font-bold border border-slate-200">
                           {borrow.quantity || 1}
                         </span>
                       </td>
+                    
                       <td className="px-2 sm:px-4 py-3 sm:py-5">
                         <div className="flex flex-col text-[10px] sm:text-[11px]">
                           <div className="flex items-center gap-1 sm:gap-1.5 text-slate-600">

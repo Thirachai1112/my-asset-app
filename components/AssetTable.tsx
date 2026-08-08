@@ -14,6 +14,7 @@ export default function AssetTable() {
   const [assets, setAssets] = useState<Asset[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
+  const [selectedType, setSelectedType] = useState<string>('all')
 
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -78,6 +79,11 @@ export default function AssetTable() {
 
   // Filter logic
   const filteredAssets = assets.filter((asset) => {
+    // กรองตามประเภท
+    if (selectedType !== 'all') {
+      if (asset.type !== selectedType) return false
+    }
+
     const searchLower = searchTerm.toLowerCase().trim()
     if (!searchLower) return true
     return (
@@ -173,7 +179,7 @@ export default function AssetTable() {
   if (loading) return <div className="p-12 text-center text-slate-400 animate-pulse">กำลังโหลดข้อมูลครุภัณฑ์...</div>
 
   return (
-    <div className="p-3 sm:p-6">
+    <div className="p-3 sm:p-6 ">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
         <div>
@@ -188,8 +194,8 @@ export default function AssetTable() {
         </button>
       </div>
 
-      {/* Search */}
-      <div className="mb-4 sm:mb-6">
+      {/* Search & Filters */}
+      <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
         <SearchInput
           value={searchTerm}
           onChange={(value) => {
@@ -198,6 +204,21 @@ export default function AssetTable() {
           }}
           placeholder="ค้นหาด้วย ชื่อ, แบรนด์, ประเภท, S/N..."
         />
+        <select
+          value={selectedType}
+          onChange={(e) => {
+            setSelectedType(e.target.value)
+            setCurrentPage(1)
+          }}
+          className="px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-700 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all shadow-sm cursor-pointer w-full sm:w-48 shrink-0"
+        >
+          <option value="all">📁 ทุกประเภท</option>
+          {ASSET_TYPE_OPTIONS.map((item) => (
+            <option key={item.value} value={item.value}>
+              {item.label}
+            </option>
+          ))}
+        </select>
       </div>
 
       {/* Table */}
