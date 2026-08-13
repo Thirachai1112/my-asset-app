@@ -137,7 +137,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-gradient-to-r from-[#7c3aed] to-[#6D28D9] hover:from-[#6d28d9] hover:to-[#5b21b6] text-white font-bold py-4 rounded-2xl shadow-lg shadow-purple-500/20 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed mt-2"
+            className="w-full bg-gradient-to-r from-[#7c3aed] to-[#6D28D9] hover:from-[#6d28d9] hover:to-[#5b21b6] text-white font-bold py-4 rounded-2xl shadow-lg shadow-purple-500/20 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed mt-2 cursor-pointer"
           >
             {loading ? (
               <span className="flex items-center justify-center gap-2">
@@ -147,10 +147,26 @@ export default function LoginPage() {
             ) : '🔐 เข้าสู่ระบบ'}
           </button>
 
+          <div className="flex items-center my-4">
+            <div className="flex-grow border-t border-[rgba(124,58,237,0.12)]"></div>
+            <span className="px-3 text-xs text-[#6b6580] font-medium">หรือ</span>
+            <div className="flex-grow border-t border-[rgba(124,58,237,0.12)]"></div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              window.location.href = '/api/auth/login'
+            }}
+            className="w-full bg-gradient-to-r from-[#742183] to-[#9c27b0] hover:from-[#601a6d] hover:to-[#821c96] text-white font-bold py-4 rounded-2xl shadow-lg shadow-purple-900/10 transition-all active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer"
+          >
+            ⚡ เข้าสู่ระบบด้วย PEA SSO
+          </button>
+
           <button
             type="button"
             onClick={() => router.push('/')}
-            className="w-full bg-[#f8f7ff] hover:bg-[#ede9fe] text-[#6b6580] hover:text-[#7c3aed] font-bold py-4 rounded-2xl transition-all active:scale-[0.98] border border-[rgba(124,58,237,0.12)]"
+            className="w-full bg-[#f8f7ff] hover:bg-[#ede9fe] text-[#6b6580] hover:text-[#7c3aed] font-bold py-4 rounded-2xl transition-all active:scale-[0.98] border border-[rgba(124,58,237,0.12)] cursor-pointer"
           >
             ← กลับหน้าหลัก
           </button>

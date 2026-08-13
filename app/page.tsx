@@ -90,7 +90,7 @@ const navItems = [
   { icon: LayoutDashboard, label: "ภาพรวม", href: "/", active: true },
   { icon: Package, label: "ทรัพย์สิน", href: "/borrows" },
   { icon: Wrench, label: "งานซ่อม", href: "/repairs" },
-  { icon: Wrench, label: "ทรัพย์สินสำหรับโอน", href: "/#" },
+  { icon: Wrench, label: "ทรัพย์สินสำหรับโอน", href: "/transfer" },
 ]
 
 // --- Color Palette (White-Purple Theme via CSS Variables) ---
@@ -189,12 +189,19 @@ export default function DashboardPortal() {
   const handleLogout = async () => {
     try {
       localStorage.removeItem('user_profile')
-      await fetch('/api/auth/logout', { method: 'POST' })
+      const res = await fetch('/api/auth/logout', { method: 'POST' })
+      const data = await res.json().catch(() => ({}))
+      
       if (supabase) {
         await supabase.auth.signOut()
       }
-      router.push('/login')
-      router.refresh()
+
+      if (data.logoutUrl) {
+        window.location.href = data.logoutUrl
+      } else {
+        router.push('/login')
+        router.refresh()
+      }
     } catch (err) {
       console.error('Logout error:', err)
       router.push('/login')
