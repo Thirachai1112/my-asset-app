@@ -10,7 +10,6 @@ function CallbackHandler() {
   const hasTriggered = useRef(false)
 
   useEffect(() => {
-    // Prevent multiple execution in React 18/19 Strict Mode
     if (hasTriggered.current) return
     hasTriggered.current = true
 
@@ -41,7 +40,6 @@ function CallbackHandler() {
         const result = await res.json()
 
         if (res.ok && result.success) {
-          // Save user profile in localStorage (consistent with normal login)
           localStorage.setItem('user_profile', JSON.stringify(result.user))
 
           Swal.fire({
@@ -51,7 +49,11 @@ function CallbackHandler() {
             timer: 1500,
             showConfirmButton: false,
           }).then(() => {
-            router.push('/')
+            if (result.user.role === '/') {
+              router.push('/admin')
+            } else {
+              router.push('/')
+            }
             router.refresh()
           })
         } else {
@@ -85,10 +87,10 @@ function CallbackHandler() {
   )
 }
 
+// จุดสำคัญ: ต้องมี export default นำหน้า component หลักเสมอ
 export default function SSOCallbackPage() {
   return (
     <main className="min-h-screen bg-[#f8f7ff] flex items-center justify-center p-4 relative overflow-hidden font-sans">
-      {/* Background Decor - Purple Theme */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0">
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-purple-500/10 rounded-full blur-[120px]"></div>
         <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-violet-600/10 rounded-full blur-[120px]"></div>
@@ -96,7 +98,6 @@ export default function SSOCallbackPage() {
       </div>
 
       <div className="w-full max-w-md bg-white/80 backdrop-blur-xl border border-[rgba(124,58,237,0.15)] rounded-[2.5rem] p-8 md:p-10 shadow-2xl relative z-10 text-center">
-        {/* Logo/Icon */}
         <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#7c3aed] to-[#6D28D9] flex items-center justify-center text-3xl mx-auto mb-6 shadow-lg shadow-purple-500/20">
           🔑
         </div>

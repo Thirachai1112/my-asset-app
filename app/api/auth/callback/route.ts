@@ -13,15 +13,16 @@ export async function POST(request: Request) {
     const cookieStore = await cookies()
     const savedState = cookieStore.get('oauth_state')?.value
 
-    // Clear the state cookie immediately
-    cookieStore.set('oauth_state', '', { maxAge: 0, path: '/' })
-
+    // 1. ย้ายมาเช็ค State ให้เรียบร้อยก่อน ค่อยเคลียร์คุกกี้ทิ้ง
     if (!savedState || state !== savedState) {
       return NextResponse.json({ 
         success: false, 
         error: 'Invalid state parameter (CSRF protection failed)' 
       }, { status: 400 })
     }
+
+    // Clear the state cookie after validation passes
+    cookieStore.set('oauth_state', '', { maxAge: 0, path: '/' })
 
     const tokenUrl = process.env.SSO_TOKEN_URL || 'https://sso.pea.co.th/oauth2/token'
     const userInfoUrl = process.env.SSO_USERINFO_URL || 'https://sso.pea.co.th/oauth2/userinfo'
@@ -82,17 +83,20 @@ export async function POST(request: Request) {
     }
 
     const userinfo = await userInfoRes.json()
-    console.log('[SSO Callback] Received userinfo:', userinfo)
+    console.log('[SSO Callback] Received userinfo (Full JSON):', JSON.stringify(userinfo, null, 2))
 
     // Map userinfo to emp_code
-    const empCode = (
+    const rawEmpCode = (
       userinfo.emp_code || 
       userinfo.preferred_username || 
       userinfo.username || 
       userinfo.uid || 
       userinfo.sub || 
       (userinfo.email ? userinfo.email.split('@')[0] : null)
-    )?.toString().trim()
+    )
+
+    const empCode = rawEmpCode ? String(rawEmpCode).trim() : ''
+    console.log('[SSO Callback] Extracted & Cleaned empCode:', `"${empCode}"`)
 
     if (!empCode) {
       return NextResponse.json({ 
@@ -103,14 +107,15 @@ export async function POST(request: Request) {
 
     // Connect to Supabase to check if the employee code exists
     const supabase = await createClient()
+    
     const { data: userData, error: dbError } = await supabase
       .from('users')
       .select('*')
-      .eq('emp_code', empCode)
+      .ilike('emp_code', empCode)
       .single()
 
     if (dbError || !userData) {
-      console.warn(`[SSO Callback] Unauthorized employee login attempt: ${empCode}`)
+      console.warn(`[SSO Callback] Unauthorized employee login attempt: "${empCode}" | DB Error:`, dbError)
       return NextResponse.json({ 
         success: false, 
         error: `ไม่พบสิทธิ์การใช้งานของรหัสพนักงาน "${empCode}" ในระบบ` 

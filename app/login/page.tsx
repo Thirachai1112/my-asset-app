@@ -92,66 +92,7 @@ export default function LoginPage() {
         </div>
 
         <form onSubmit={handleLogin} className="space-y-5">
-          <div className="space-y-2">
-            <label className="text-[10px] font-bold text-[#6b6580] uppercase tracking-widest ml-1">
-              รหัสพนักงาน
-            </label>
-            <div className="relative group">
-              <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
-                <svg className="w-4 h-4 text-[#6b6580]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-              </div>
-              <input
-                type="text"
-                value={empCode}
-                onChange={(e) => setEmpCode(e.target.value)}
-                placeholder="EMP001"
-                className="w-full bg-[#f8f7ff] border border-[rgba(124,58,237,0.15)] text-[#2d2b3a] text-sm rounded-2xl block pl-11 p-3.5 focus:ring-2 focus:ring-purple-500/20 focus:border-[#7c3aed] outline-none transition-all font-mono"
-                required
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-[10px] font-bold text-[#6b6580] uppercase tracking-widest ml-1">
-              รหัสผ่าน
-            </label>
-            <div className="relative group">
-              <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
-                <svg className="w-4 h-4 text-[#6b6580]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                </svg>
-              </div>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full bg-[#f8f7ff] border border-[rgba(124,58,237,0.15)] text-[#2d2b3a] text-sm rounded-2xl block pl-11 p-3.5 focus:ring-2 focus:ring-purple-500/20 focus:border-[#7c3aed] outline-none transition-all"
-                required
-              />
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-gradient-to-r from-[#7c3aed] to-[#6D28D9] hover:from-[#6d28d9] hover:to-[#5b21b6] text-white font-bold py-4 rounded-2xl shadow-lg shadow-purple-500/20 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed mt-2 cursor-pointer"
-          >
-            {loading ? (
-              <span className="flex items-center justify-center gap-2">
-                <span className="w-4 h-4 rounded-full animate-spin border-2 border-white/30 border-t-white"></span>
-                กำลังตรวจสอบสิทธิ์...
-              </span>
-            ) : '🔐 เข้าสู่ระบบ'}
-          </button>
-
-          <div className="flex items-center my-4">
-            <div className="flex-grow border-t border-[rgba(124,58,237,0.12)]"></div>
-            <span className="px-3 text-xs text-[#6b6580] font-medium">หรือ</span>
-            <div className="flex-grow border-t border-[rgba(124,58,237,0.12)]"></div>
-          </div>
+          
 
           <button
             type="button"
