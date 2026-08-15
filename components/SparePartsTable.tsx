@@ -12,9 +12,14 @@ export default function SparePartsTable() {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
 
-  // Modal states
+  // Modal states (สำหรับเพิ่ม/แก้ไขอะไหล่)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingPart, setEditingPart] = useState<SparePart | null>(null)
+
+  // Modal states (สำหรับดูประวัติการใช้งานอะไหล่กับเครื่อง)
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false)
+  const [selectedPartHistory, setSelectedPartHistory] = useState<any>(null)
+  const [historyLoading, setHistoryLoading] = useState(false)
 
   // Form states
   const [partName, setPartName] = useState('')
@@ -63,6 +68,25 @@ export default function SparePartsTable() {
       setDateOut('')
     }
     setIsModalOpen(true)
+  }
+
+  // ฟังก์ชันเปิดดูประวัติการใช้อะไหล่รายตัว
+  const openHistoryModal = async (partId: number) => {
+    setIsHistoryModalOpen(true)
+    setHistoryLoading(true)
+    try {
+      const res = await fetch(`/api/spare-parts/${partId}`)
+      const json = await res.json()
+      if (json.success) {
+        setSelectedPartHistory(json.data)
+      } else {
+        showError('เกิดข้อผิดพลาด', json.error || 'ไม่สามารถโหลดประวัติได้')
+      }
+    } catch (err) {
+      showError('เกิดข้อผิดพลาด', 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้')
+    } finally {
+      setHistoryLoading(false)
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -117,26 +141,18 @@ export default function SparePartsTable() {
     }
   }
 
- // ในไฟล์ SparePartsTable.tsx
-const filteredParts = parts.filter(p => {
-  const searchLower = searchTerm.toLowerCase();
-  
-  // 1. เงื่อนไขการค้นหา
-  const matchesSearch = 
-    p.part_name.toLowerCase().includes(searchLower) ||
-    p.part_brand?.toLowerCase().includes(searchLower) ||
-    p.part_serial_number?.toLowerCase().includes(searchLower);
-  
-  // 2. เงื่อนไขการซ่อนอะไหล่ที่หมดสต็อก
-  const isAvailable = p.stock_quantity > 0;
+  const filteredParts = parts.filter(p => {
+    const searchLower = searchTerm.toLowerCase();
+    const matchesSearch =
+      p.part_name.toLowerCase().includes(searchLower) ||
+      p.part_brand?.toLowerCase().includes(searchLower) ||
+      p.part_serial_number?.toLowerCase().includes(searchLower);
 
-  return matchesSearch && isAvailable;
-});
+    return matchesSearch;
+  });
 
-// ลบบรรทัด const isAvailable = p.stock_quantity > 0; ที่อยู่นอก filter ออกให้หมด
-  
   if (loading) return <div className="p-12 text-center text-slate-400 animate-pulse">กำลังโหลดคลังอะไหล่...</div>
-  
+
   return (
     <div className="p-6">
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
@@ -177,18 +193,23 @@ const filteredParts = parts.filter(p => {
               filteredParts.map((part) => (
                 <tr key={part.id} className="hover:bg-slate-50/50 transition-colors group">
                   <td className="p-4">
-                    <div className="font-bold text-slate-900 text-sm group-hover:text-emerald-600 transition-colors">{part.part_name}</div>
+                    {/* คลิกที่ชื่ออะไหล่เพื่อดูประวัติการใช้งานกับเครื่องได้ */}
+                    <button
+                      onClick={() => openHistoryModal(part.id)}
+                      className="font-bold text-slate-900 text-sm group-hover:text-emerald-600 transition-colors text-left hover:underline"
+                    >
+                      {part.part_name} 🔍
+                    </button>
                     <div className="text-[10px] text-slate-400 font-medium uppercase">{part.part_brand || '-'}</div>
                   </td>
                   <td className="p-4 font-mono text-xs text-slate-500">
                     {part.part_serial_number || '-'}
                   </td>
                   <td className="p-4 text-center">
-                    <span className={`px-2.5 py-1 rounded-lg font-bold text-[10px] border ${
-                      part.stock_quantity > 5
-                        ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
-                        : 'bg-red-50 text-red-700 border-red-100'
-                    }`}>
+                    <span className={`px-2.5 py-1 rounded-lg font-bold text-[10px] border ${part.stock_quantity > 5
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                      : 'bg-red-50 text-red-700 border-red-100'
+                      }`}>
                       {part.stock_quantity} ชิ้น
                     </span>
                   </td>
@@ -200,8 +221,9 @@ const filteredParts = parts.filter(p => {
                   </td>
                   <td className="p-4 text-center">
                     <div className="flex justify-center gap-1">
-                      <button onClick={() => openModal(part)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">✏️</button>
-                      <button onClick={() => handleDelete(part.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors">🗑️</button>
+                      <button onClick={() => openHistoryModal(part.id)} title="ดูประวัติการใช้งาน" className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors">📦</button>
+                      <button onClick={() => openModal(part)} title="แก้ไข" className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">✏️</button>
+                      <button onClick={() => handleDelete(part.id)} title="ลบ" className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors">🗑️</button>
                     </div>
                   </td>
                 </tr>
@@ -215,6 +237,7 @@ const filteredParts = parts.filter(p => {
         </table>
       </div>
 
+      {/* Modal: เพิ่ม / แก้ไขอะไหล่ */}
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
@@ -265,6 +288,82 @@ const filteredParts = parts.filter(p => {
             <button type="submit" className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-2xl shadow-lg shadow-emerald-100 transition-all active:scale-95">บันทึกข้อมูลอะไหล่</button>
           </div>
         </form>
+      </Modal>
+
+      {/* Modal: ดูประวัติการนำไปใช้กับเครื่อง/ครุภัณฑ์ */}
+      <Modal
+        isOpen={isHistoryModalOpen}
+        onClose={() => setIsHistoryModalOpen(false)}
+        title="📋 ประวัติการเบิกใช้อะไหล่กับครุภัณฑ์"
+        darkHeader
+        maxWidth="max-w-2xl"
+      >
+        <div className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+          {historyLoading ? (
+            <div className="text-center py-10 text-slate-400 animate-pulse">กำลังโหลดประวัติการใช้งาน...</div>
+          ) : selectedPartHistory ? (
+            <div>
+              <div className="bg-slate-50 p-4 rounded-2xl mb-4 border border-slate-100">
+                <h4 className="font-bold text-slate-800 text-base">{selectedPartHistory.part_name}</h4>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  ยี่ห้อ: <span className="font-semibold text-slate-700">{selectedPartHistory.part_brand || '-'}</span> |
+                  Serial Number: <span className="font-mono text-slate-700">{selectedPartHistory.part_serial_number || '-'}</span>
+                </p>
+              </div>
+
+              <h5 className="font-bold text-slate-700 text-sm mb-2">ประวัติการถูกนำไปใช้ซ่อมเครื่อง/ครุภัณฑ์:</h5>
+
+              {selectedPartHistory.usage_history && selectedPartHistory.usage_history.length > 0 ? (
+                <div className="border border-slate-200 rounded-2xl overflow-hidden">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="bg-slate-100 text-slate-600 font-bold">
+                        <th className="p-3">วันที่เบิก</th>
+                        <th className="p-3">เลขครุภัณฑ์ (Assets)</th>
+                        <th className="p-3">อาการ / รายละเอียด</th>
+                        <th className="p-3 text-center">จำนวนที่ใช้</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {selectedPartHistory.usage_history.map((usage: any, idx: number) => {
+                        const repairItem = usage.repairs?.repair_items?.[0] || {}
+                        return (
+                          <tr key={idx} className="hover:bg-slate-50">
+                            <td className="p-3 text-slate-500">
+                              {new Date(usage.created_at).toLocaleDateString('th-TH')}
+                            </td>
+                            <td className="p-3 font-semibold text-emerald-600 font-mono">
+                              {repairItem.assets_number || 'ไม่ระบุ'}
+                            </td>
+                            <td className="p-3 text-slate-700">
+                              {repairItem.problem_detail || '-'}
+                            </td>
+                            <td className="p-3 text-center font-bold text-slate-800">
+                              {usage.quantity_used} ชิ้น
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="text-center py-10 bg-slate-50 rounded-2xl border border-dashed border-slate-200 text-slate-400 text-sm italic">
+                  ยังไม่มีประวัติการนำอะไหล่นี้ไปใช้งานกับเครื่องใดๆ
+                </div>
+              )}
+            </div>
+          ) : null}
+
+          <div className="pt-4 border-t border-slate-100 flex justify-end">
+            <button
+              onClick={() => setIsHistoryModalOpen(false)}
+              className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-6 py-2.5 rounded-xl transition-all"
+            >
+              ปิดหน้าต่าง
+            </button>
+          </div>
+        </div>
       </Modal>
     </div>
   )

@@ -1,17 +1,28 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server' 
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const supabase = await createClient()
+    const { searchParams } = new URL(request.url)
+    const userId = searchParams.get('user_id')
+    const borrowerName = searchParams.get('borrower_name')
 
     // 1. ดึงข้อมูลรายการยืม (Borrows) และอุปกรณ์ (Assets)
-    const { data: borrows, error: borrowError } = await supabase
+    let query = supabase
       .from('borrows')
       .select(`
         *,
         assets ( id, name, brand, serial_number, type, asset_code, contract_number )
       `)
+
+    if (userId) {
+      query = query.eq('user_id', Number(userId))
+    } else if (borrowerName) {
+      query = query.eq('borrower_name', borrowerName)
+    }
+
+    const { data: borrows, error: borrowError } = await query
       .order('id', { ascending: false })
       .limit(1000)
 

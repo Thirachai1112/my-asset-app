@@ -53,6 +53,24 @@ export default function NewRepairPage() {
   const [typeItem, setTypeItem] = useState('')
   const [customTypeItem, setCustomTypeItem] = useState('')
 
+  // Auto-populate from localStorage on mount
+  useState(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const profileStr = localStorage.getItem("user_profile");
+        if (profileStr) {
+          const profile = JSON.parse(profileStr);
+          if (profile.full_name) setRequesterName(profile.full_name);
+          if (profile.department) setRequesterDept(profile.department);
+          if (profile.Job_position) setRequesterPosition(profile.Job_position);
+          if (profile.emp_code) setRequesterEmpCode(profile.emp_code);
+        }
+      } catch (e) {
+        console.error("Failed to parse user profile in repairs form", e);
+      }
+    }
+  });
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     

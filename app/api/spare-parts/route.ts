@@ -10,9 +10,14 @@ export async function GET() {
       .select('*')
       .order('id', { ascending: false })
 
-    if (error) throw error
+    if (error) {
+      console.error('Supabase Error [GET /api/spare-parts]:', error) // พริ้นท์ Error ออกดูใน Terminal
+      throw error
+    }
+
     return NextResponse.json({ success: true, data })
   } catch (err: any) {
+    console.error('Catch Error [GET /api/spare-parts]:', err.message)
     return NextResponse.json({ success: false, error: err.message }, { status: 500 })
   }
 }
@@ -22,30 +27,35 @@ export async function POST(request: Request) {
   try {
     const supabase = await createClient()
     const body = await request.json()
-    const { 
-      part_name, 
-      stock_quantity, 
-      unit_price, 
-      part_brand, 
-      part_serial_number, 
-      part_date_in 
+    const {
+      part_name,
+      stock_quantity,
+      unit_price,
+      part_brand,
+      part_serial_number,
+      part_date_in
     } = body
 
     const { data, error } = await supabase
       .from('spare_parts')
-      .insert([{ 
-        part_name, 
-        stock_quantity, 
-        unit_price, 
-        part_brand, 
-        part_serial_number, 
+      .insert([{
+        part_name,
+        stock_quantity,
+        unit_price,
+        part_brand,
+        part_serial_number,
         part_date_in: part_date_in || new Date().toISOString()
       }])
       .select()
 
-    if (error) throw error
+    if (error) {
+      console.error('Supabase Error [POST /api/spare-parts]:', error)
+      throw error
+    }
+
     return NextResponse.json({ success: true, data: data[0] }, { status: 201 })
   } catch (err: any) {
+    console.error('Catch Error [POST /api/spare-parts]:', err.message)
     return NextResponse.json({ success: false, error: err.message }, { status: 500 })
   }
 }

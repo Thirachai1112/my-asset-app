@@ -2,11 +2,13 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 
 // 1. GET: ดึงรายการซ่อมทั้งหมด พร้อมข้อมูลจาก repair_items
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const supabase = await createClient()
+    const { searchParams } = new URL(request.url)
+    const empCode = searchParams.get('emp_code')
 
-    const { data: repairs, error } = await supabase
+    let query = supabase
       .from('repairs')
       .select(`
         *,
@@ -19,6 +21,12 @@ export async function GET() {
           Job_position
         )
       `)
+
+    if (empCode) {
+      query = query.eq('requester_emp_code', empCode)
+    }
+
+    const { data: repairs, error } = await query
       .order('id', { ascending: false })
 
     if (error) {
@@ -40,7 +48,7 @@ export async function GET() {
     // แปรรูปข้อมูลให้แบน (Flatten) และแนบเอกสารพร้อมคำนวณราคา
     const formattedData = repairs.map((r: any) => {
       const repairDocs = documents?.filter((doc: any) => Number(doc.repair_id) === Number(r.id)) || []
-      
+
       // คำนวณยอดรวมอะไหล่และจำนวน
       const repairParts = partCosts?.filter((p: any) => Number(p.repair_id) === Number(r.id)) || []
       const totalPartsCost = repairParts.reduce((sum: number, p: any) => sum + (Number(p.total_price) || 0), 0)
@@ -56,6 +64,7 @@ export async function GET() {
         grand_total: totalPartsCost + (Number(r.service_price) || 0),
         technician_id: r.user_id, // Map user_id to technician_id for frontend/PDF compatibility
         technician_name_inspect: r.users?.full_name || null,
+        technician_department_inspect: r.users?.department || null,
         technician_position_inspect: r.users?.Job_position || null
       }
     })
@@ -72,11 +81,11 @@ export async function POST(request: Request) {
   try {
     const supabase = await createClient()
     const body = await request.json()
-    
-    const { 
-      problem_detail, 
-      requester_name, 
-      requester_dept, 
+
+    const {
+      problem_detail,
+      requester_name,
+      requester_dept,
       requester_phone,
       requester_position,
       requester_emp_code,

@@ -69,7 +69,8 @@ export async function POST(request: Request) {
         emp_code: finalUser.emp_code,
         full_name: finalUser.full_name,
         department: finalUser.department,
-        role: finalUser.role
+        role: finalUser.role,
+        Job_position: finalUser.Job_position
       }
     })
 

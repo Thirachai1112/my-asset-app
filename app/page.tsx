@@ -191,7 +191,7 @@ export default function DashboardPortal() {
       localStorage.removeItem('user_profile')
       const res = await fetch('/api/auth/logout', { method: 'POST' })
       const data = await res.json().catch(() => ({}))
-      
+
       if (supabase) {
         await supabase.auth.signOut()
       }
@@ -386,9 +386,9 @@ export default function DashboardPortal() {
           <div
             className="w-28 h-28 rounded-[2rem] flex items-center justify-center text-6xl mb-8 shadow-2xl mx-auto animate-float"
             style={{
-                background: `linear-gradient(135deg, ${COLORS.primary}, #6D28D9)`,
-                boxShadow: `0 20px 60px rgba(124,58,237,0.15)`,
-                animation: "float 3s ease-in-out infinite",
+              background: `linear-gradient(135deg, ${COLORS.primary}, #6D28D9)`,
+              boxShadow: `0 20px 60px rgba(124,58,237,0.15)`,
+              animation: "float 3s ease-in-out infinite",
             }}
           >
             📦
@@ -403,7 +403,7 @@ export default function DashboardPortal() {
             ระบบบริหารจัดการทรัพย์สินและงานแจ้งซ่อมแบบครบวงจร <br />
             กรุณาเข้าสู่ระบบเพื่อดำเนินการขอยืมอุปกรณ์ หรือแจ้งซ่อม
           </p>
-          
+
           {/* Feature Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full max-w-3xl">
             <Link
@@ -1063,9 +1063,9 @@ export default function DashboardPortal() {
           ยินดีต้อนรับ
         </h1>
         <p className="max-w-lg mb-10 leading-relaxed text-lg" style={{ color: COLORS.muted }}>
-          {profile?.full_name || "ผู้ใช้งาน"} · {profile?.department || "ระบบ"}
+          {profile?.full_name || "ผู้ใช้งาน"}  {profile?.department || "ระบบ"}
         </p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-lg">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full max-w-2xl">
           <Link
             href="/borrows/request"
             className="group relative font-bold py-6 px-6 rounded-2xl shadow-lg text-center overflow-hidden transition-all duration-300 hover:-translate-y-1"
@@ -1102,12 +1102,29 @@ export default function DashboardPortal() {
               style={{ background: COLORS.primaryLight }}
             />
           </Link>
+          <Link
+            href="/my-history"
+            className="group relative font-bold py-6 px-6 rounded-2xl shadow-lg text-center overflow-hidden transition-all duration-300 hover:-translate-y-1"
+            style={{
+              background: COLORS.card,
+              border: `1px solid ${COLORS.primaryBorder}`,
+              color: COLORS.text,
+            }}
+          >
+            <div className="relative z-10">
+              <span className="block text-3xl mb-2">👤</span>
+              <span className="block text-sm font-bold">ประวัติของฉัน</span>
+            </div>
+            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+              style={{ background: COLORS.primaryLight }}
+            />
+          </Link>
         </div>
         <button
           onClick={handleLogout}
           className="mt-10 text-sm px-6 py-3 rounded-xl transition-all hover:-translate-y-0.5"
-          style={{ 
-            color: COLORS.muted, 
+          style={{
+            color: COLORS.muted,
             border: `1px solid ${COLORS.primaryBorder}`,
             background: COLORS.card,
           }}

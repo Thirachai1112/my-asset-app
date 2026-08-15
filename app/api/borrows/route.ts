@@ -46,6 +46,7 @@ export async function POST(request: Request) {
       department, 
       phone, 
       return_date, 
+      user_id,
       items // อาร์เรย์ของในตะกร้าครุภัณฑ์ [ { asset_id, quantity, ... }, ... ]
     } = body
 
@@ -85,7 +86,7 @@ export async function POST(request: Request) {
         .insert([
           {
             doc_id: null,
-            user_id: null,
+            user_id: user_id ? Number(user_id) : null,
             asset_id: currentAssetId,
             borrower_name: borrower_name,
             position: position || null,

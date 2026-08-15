@@ -64,6 +64,7 @@ export default function BorrowRequestPage() {
     const [cart, setCart] = useState<CartItem[]>([]);
     const [loading, setLoading] = useState(true);
 
+    const [userId, setUserId] = useState<number | null>(null);
     const [borrowerPurpose, setBorrowerPurpose] = useState("");
     const [borrowerName, setBorrowerName] = useState("");
     const [position, setPosition] = useState("");
@@ -77,6 +78,41 @@ export default function BorrowRequestPage() {
     const [showMobileCart, setShowMobileCart] = useState(false);
 
     useEffect(() => {
+        // Auto-populate from local user profile if logged in
+        try {
+            const profileStr = localStorage.getItem("user_profile");
+            if (profileStr) {
+                const profile = JSON.parse(profileStr);
+                if (profile.id) {
+                    setUserId(profile.id);
+                    fetch(`/api/borrows/history?user_id=${profile.id}`)
+                        .then(res => res.json())
+                        .then(historyData => {
+                            if (historyData.success && historyData.history && historyData.history.length > 0) {
+                                const lastBorrow = historyData.history.find((b: any) => b.phone);
+                                if (lastBorrow && lastBorrow.phone) setPhone(lastBorrow.phone);
+                            }
+                        })
+                        .catch(err => console.error("Error loading phone from history", err));
+                } else if (profile.full_name) {
+                    fetch(`/api/borrows/history?borrower_name=${encodeURIComponent(profile.full_name)}`)
+                        .then(res => res.json())
+                        .then(historyData => {
+                            if (historyData.success && historyData.history && historyData.history.length > 0) {
+                                const lastBorrow = historyData.history.find((b: any) => b.phone);
+                                if (lastBorrow && lastBorrow.phone) setPhone(lastBorrow.phone);
+                            }
+                        })
+                        .catch(err => console.error("Error loading phone from history", err));
+                }
+                if (profile.full_name) setBorrowerName(profile.full_name);
+                if (profile.Job_position) setPosition(profile.Job_position);
+                if (profile.department) setDepartment(profile.department);
+            }
+        } catch (e) {
+            console.error("Failed to load user profile", e);
+        }
+
         fetch("/api/assets")
             .then((res) => res.json())
             .then((responseBody) => {
@@ -166,6 +202,7 @@ export default function BorrowRequestPage() {
                     department: department,
                     phone: phone,
                     return_date: returnDate,
+                    user_id: userId,
                     items: cart.map((item) => ({
                         asset_id: item.id,
                         asset_name: item.name,
