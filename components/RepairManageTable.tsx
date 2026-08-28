@@ -58,7 +58,8 @@ export default function RepairManageTable() {
     try {
       const { data, error } = await supabase
         .from('users')
-        .select('id, full_name, Job_position')
+        .select('id, full_name, Job_position, role')
+        .eq('role', 'admin')
         .order('full_name')
 
       if (error) throw error

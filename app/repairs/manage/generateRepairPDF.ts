@@ -14,6 +14,7 @@ interface RepairData {
     technician_name_inspect?: string;
     technician_position_inspect?: string;
     fix_detail?: string;
+    service_price?: number;
     item?: {
         manual_brand: string;
         assets_number?: string;
@@ -295,3 +296,4 @@ export const generateRepairPDF = async (repair: RepairData) => {
     // บันทึกไฟล์เอกสาร PDF
     doc.save(`ใบซ่อมทำเสนอ-${repair.id}_${repair.requester_name}.pdf`);
 };
+

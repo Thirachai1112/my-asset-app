@@ -11,6 +11,8 @@ export default function SparePartsTable() {
   const [parts, setParts] = useState<SparePart[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 10
 
   // Modal states (สำหรับเพิ่ม/แก้ไขอะไหล่)
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -46,6 +48,10 @@ export default function SparePartsTable() {
   useEffect(() => {
     fetchParts()
   }, [])
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchTerm])
 
   const openModal = (part: SparePart | null = null) => {
     if (part) {
@@ -151,6 +157,25 @@ export default function SparePartsTable() {
     return matchesSearch;
   });
 
+  const totalPages = Math.ceil(filteredParts.length / itemsPerPage)
+  const paginatedParts = filteredParts.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  )
+
+  const getPageNumbers = () => {
+    const pages = []
+    const range = 2
+    for (let i = 1; i <= totalPages; i++) {
+      if (i === 1 || i === totalPages || (i >= currentPage - range && i <= currentPage + range)) {
+        pages.push(i)
+      } else if (pages[pages.length - 1] !== '...') {
+        pages.push('...')
+      }
+    }
+    return pages
+  }
+
   if (loading) return <div className="p-12 text-center text-slate-400 animate-pulse">กำลังโหลดคลังอะไหล่...</div>
 
   return (
@@ -189,8 +214,8 @@ export default function SparePartsTable() {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-50">
-            {filteredParts.length > 0 ? (
-              filteredParts.map((part) => (
+            {paginatedParts.length > 0 ? (
+              paginatedParts.map((part) => (
                 <tr key={part.id} className="hover:bg-slate-50/50 transition-colors group">
                   <td className="p-4">
                     {/* คลิกที่ชื่ออะไหล่เพื่อดูประวัติการใช้งานกับเครื่องได้ */}
@@ -236,6 +261,57 @@ export default function SparePartsTable() {
           </tbody>
         </table>
       </div>
+
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-6 bg-white p-4 rounded-2xl border border-slate-200">
+          <div className="text-xs text-slate-500">
+            แสดง {(currentPage - 1) * itemsPerPage + 1} ถึง{' '}
+            {Math.min(currentPage * itemsPerPage, filteredParts.length)} จากทั้งหมด{' '}
+            {filteredParts.length} รายการ
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:pointer-events-none transition-all"
+            >
+              ย้อนกลับ
+            </button>
+            <div className="flex items-center gap-1">
+              {getPageNumbers().map((page, index) => {
+                if (page === '...') {
+                  return (
+                    <span key={`dots-${index}`} className="px-2 text-slate-400 text-xs">
+                      ...
+                    </span>
+                  )
+                }
+                return (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page as number)}
+                    className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${
+                      currentPage === page
+                        ? 'bg-emerald-600 text-white shadow-md shadow-emerald-100'
+                        : 'border border-slate-200 text-slate-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    {page}
+                  </button>
+                )
+              })}
+            </div>
+            <button
+              onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages}
+              className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:pointer-events-none transition-all"
+            >
+              ถัดไป
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Modal: เพิ่ม / แก้ไขอะไหล่ */}
       <Modal

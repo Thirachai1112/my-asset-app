@@ -5,6 +5,7 @@ import Link from 'next/link'
 import Swal from 'sweetalert2'
 import * as XLSX from 'xlsx'
 import { generateRepairPDF } from '@/app/repairs/manage/generateRepairPDF'
+import { generateApprovalPDF, thaiBaht } from '@/app/repairs/manage/generateApprovalPDF'
 import { generateRepairPDFquick } from '@/app/repairs/manage/generateRepairPDFquick'
 import RepairDocumentUploader from './RepairDocumentUploader'
 
@@ -80,7 +81,7 @@ export default function RepairTable() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     const bodyData = {
       requester_name: requesterName,
       requester_dept: requesterDept,
@@ -186,6 +187,88 @@ export default function RepairTable() {
     }
   }
 
+  const handleApprovalPdfWithSwal = async (repair: any) => {
+    const { value: formValues } = await Swal.fire({
+      title: 'บันทึกรายละเอียดรายงานขออนุมัติ',
+      html: `
+        <style>
+          .swal-form-grid {
+            display: grid;
+            grid-template-columns: 150px 1fr;
+            gap: 10px;
+            align-items: center;
+            text-align: left;
+            font-family: 'Sarabun', sans-serif;
+            font-size: 14px;
+          }
+          .swal-form-grid label { font-weight: bold; }
+          .swal-form-grid input, .swal-form-grid select {
+            height: 35px !important;
+            margin: 0 !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
+          }
+        </style>
+        <div class="swal-form-grid">
+          <label>1. อนุมัติเลขที่:</label> <input id="swal-input-approve" class="swal2-input" placeholder="420/2569">
+          <label>2. อนุมัติเลขที่ 2:</label> <input id="swal-input-approve02" class="swal2-input" placeholder="420/2569">
+          <label>3. วันที่อนุมัติ:</label> <input id="swal-input-date" class="swal2-input" type="date">
+          <label>4. ผู้ตรวจรับ:</label> <input id="swal-input-amount" class="swal2-input" type="number" placeholder="0.00" value="${repair.service_price || ''}">
+          <label>5. เงินไม่รวม VAT (บาท):</label> <input id="swal-input-amount" class="swal2-input" type="number" placeholder="0.00" value="${repair.service_price || ''}">
+          <label>6. VAT 7%:</label> <input id="swal-input-vat" class="swal2-input" readonly style="background-color: #eee;">
+          <label>7. ยอดรวม:</label> <input id="swal-input-total" class="swal2-input" readonly style="background-color: #eee;">
+          <label>8. ยอดตัวอักษร:</label> <input id="swal-input-total-text" class="swal2-input" readonly style="background-color: #eee;">
+          <label>9. รหัสบัญชี:</label> <input id="swal-input-account-code" class="swal2-input" value="53051060">
+          <label>10. ศูนย์ต้นทุน:</label> <input id="swal-input-cost-center" class="swal2-input" value="E301023000">
+        </div>
+      `,
+      focusConfirm: false,
+      showCancelButton: true,
+      confirmButtonText: 'สร้าง PDF',
+      didOpen: () => {
+        const amountInput = document.getElementById('swal-input-amount') as HTMLInputElement;
+        const vatInput = document.getElementById('swal-input-vat') as HTMLInputElement;
+        const totalInput = document.getElementById('swal-input-total') as HTMLInputElement;
+        const totalTextInput = document.getElementById('swal-input-total-text') as HTMLInputElement;
+
+        if (amountInput) {
+          amountInput.addEventListener('input', () => {
+            const amount = parseFloat(amountInput.value) || 0;
+            const vat = amount * 0.07;
+            const total = amount + vat;
+            const vatRounded = Math.round(vat);
+            const totalRounded = Math.round(total);
+
+            vatInput.value = vatRounded.toLocaleString('en-US');
+            totalInput.value = totalRounded.toLocaleString('en-US');
+            totalTextInput.value = thaiBaht(totalRounded);
+          });
+
+          if (amountInput.value) {
+            amountInput.dispatchEvent(new Event('input'));
+          }
+        }
+      },
+      preConfirm: () => {
+    return {
+        approveId: (document.getElementById('swal-input-approve') as HTMLInputElement)?.value || '',
+        approveNo02: (document.getElementById('swal-input-approve02') as HTMLInputElement)?.value || '',
+        date: (document.getElementById('swal-input-date') as HTMLInputElement)?.value || '',
+        amount: (document.getElementById('swal-input-amount') as HTMLInputElement)?.value || '',
+        vat: (document.getElementById('swal-input-vat') as HTMLInputElement)?.value || '',
+        total: (document.getElementById('swal-input-total') as HTMLInputElement)?.value || '',
+        totalText: (document.getElementById('swal-input-total-text') as HTMLInputElement)?.value || '',
+        accountCode: (document.getElementById('swal-input-account-code') as HTMLInputElement)?.value || '',
+        costCenter: (document.getElementById('swal-input-cost-center') as HTMLInputElement)?.value || '',
+    }
+}
+    });
+
+    if (formValues) {
+      generateApprovalPDF(repair, formValues);
+    }
+  };
+
   // 🌟 ฟังก์ชันกรองข้อมูลตามช่วงเดือน ปี และคำค้นหา
   const filteredRepairs = repairs.filter((r) => {
     if (!r.repair_date) return false
@@ -235,7 +318,7 @@ export default function RepairTable() {
     partsQty: monthlyData.reduce((sum, r) => sum + (Number(r.total_parts_qty) || 0), 0),
     service: monthlyData.reduce((sum, r) => sum + (Number(r.service_price) || 0), 0),
     total: monthlyData.reduce((sum, r) => sum + (Number(r.grand_total) || 0), 0),
-    
+
     countsByType: monthlyData.reduce((acc: any, r) => {
       const type = r.item?.type_item || 'ไม่ระบุประเภท';
       acc[type] = (acc[type] || 0) + 1;
@@ -282,7 +365,7 @@ export default function RepairTable() {
         { 'หัวข้อ': 'ช่วงเวลาของรายงาน', 'ข้อมูล': rangeText },
         { 'หัวข้อ': 'จำนวนงานซ่อมทั้งหมด', 'ข้อมูล': `${summary.count} รายการ` },
         { 'หัวข้อ': 'จำนวนอะไหล่สำรองในแผนกที่ใช้รวม', 'ข้อมูล': `${summary.partsQty} ชิ้น` },
-        ...costByTypeRows, 
+        ...costByTypeRows,
         { 'หัวข้อ': 'งบประมาณรวมทั้งสิ้น', 'ข้อมูล': summary.total.toLocaleString(undefined, { minimumFractionDigits: 2 }) },
         { 'หัวข้อ': 'จำแนกตามจำนวนเครื่อง', 'ข้อมูล': Object.entries(summary.countsByType).map(([type, count]) => `${type}: ${count} เครื่อง`).join(', ') || 'ไม่มีข้อมูล' }
       ];
@@ -325,13 +408,13 @@ export default function RepairTable() {
               <p className="text-[10px] text-slate-400 uppercase tracking-wider">Financial & Repair Analytics</p>
             </div>
           </div>
-          
+
           {/* 🌟 Month Range & Year Controls */}
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5">
               <span className="text-[10px] font-bold text-slate-500 uppercase">จาก:</span>
-              <select 
-                value={startMonth} 
+              <select
+                value={startMonth}
                 onChange={(e) => setStartMonth(parseInt(e.target.value))}
                 className="bg-transparent text-xs font-bold text-slate-700 outline-none cursor-pointer"
               >
@@ -345,8 +428,8 @@ export default function RepairTable() {
 
             <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5">
               <span className="text-[10px] font-bold text-slate-500 uppercase">ถึง:</span>
-              <select 
-                value={endMonth} 
+              <select
+                value={endMonth}
                 onChange={(e) => setEndMonth(parseInt(e.target.value))}
                 className="bg-transparent text-xs font-bold text-slate-700 outline-none cursor-pointer"
               >
@@ -358,8 +441,8 @@ export default function RepairTable() {
               </select>
             </div>
 
-            <select 
-              value={selectedYear} 
+            <select
+              value={selectedYear}
               onChange={(e) => setSelectedYear(parseInt(e.target.value))}
               className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 outline-none cursor-pointer"
             >
@@ -368,7 +451,7 @@ export default function RepairTable() {
               ))}
             </select>
 
-            <button 
+            <button
               onClick={exportToExcel}
               className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-md shadow-emerald-100 flex items-center gap-2"
             >
@@ -491,9 +574,8 @@ export default function RepairTable() {
                   <td className="p-4 text-slate-700 min-w-[150px] max-w-xs whitespace-normal break-words align-top">{repair.item?.problem_detail || '-'}</td>
                   <td className="p-4 text-slate-700 min-w-[150px] max-w-xs whitespace-normal break-words align-top">{repair.fix_detail || '-'}</td>
                   <td className="p-4 text-center align-top">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border whitespace-nowrap ${
-                      REPAIR_STATUS.find(s => s.value === repair.status)?.color || 'bg-slate-50 text-slate-700'
-                    }`}>
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border whitespace-nowrap ${REPAIR_STATUS.find(s => s.value === repair.status)?.color || 'bg-slate-50 text-slate-700'
+                      }`}>
                       {REPAIR_STATUS.find(s => s.value === repair.status)?.label.split(' ')[1] || repair.status}
                     </span>
                   </td>
@@ -535,6 +617,13 @@ export default function RepairTable() {
                         >
                           🖨️ พิมพ์ใบซ่อม
                         </button>
+                        <button
+                          onClick={() => handleApprovalPdfWithSwal(repair)}
+                          className="bg-slate-50 text-slate-600 hover:bg-slate-100 px-2 py-1.5 rounded text-[10px] font-bold border border-slate-300 whitespace-nowrap w-full"
+                        >
+                          🖨️ ต.จ.6 ป.61
+                        </button>
+
 
                         <button
                           onClick={() => generateRepairPDFquick(repair)}
@@ -586,9 +675,8 @@ export default function RepairTable() {
                   <span className="text-[10px] font-mono text-slate-400 bg-slate-50 px-2 py-0.5 rounded-md">
                     #{indexOfFirstItem + index + 1}
                   </span>
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${
-                    REPAIR_STATUS.find(s => s.value === repair.status)?.color || 'bg-slate-50 text-slate-700'
-                  }`}>
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${REPAIR_STATUS.find(s => s.value === repair.status)?.color || 'bg-slate-50 text-slate-700'
+                    }`}>
                     {REPAIR_STATUS.find(s => s.value === repair.status)?.label.split(' ')[1] || repair.status}
                   </span>
                 </div>
