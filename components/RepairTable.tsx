@@ -7,7 +7,9 @@ import * as XLSX from 'xlsx'
 import { generateRepairPDF } from '@/app/repairs/manage/generateRepairPDF'
 import { generateApprovalPDF, thaiBaht } from '@/app/repairs/manage/generateApprovalPDF'
 import { generateRepairPDFquick } from '@/app/repairs/manage/generateRepairPDFquick'
+import { generateProcurementPDF } from '@/app/repairs/manage/generateProcurementPDF'
 import RepairDocumentUploader from './RepairDocumentUploader'
+import { createClient } from '@/utils/supabase/client'
 
 const REPAIR_STATUS = [
   { value: 'Pending', label: '⏳ รอดำเนินการ (Pending)', color: 'bg-amber-50 text-amber-700 border-amber-200' },
@@ -15,8 +17,18 @@ const REPAIR_STATUS = [
   { value: 'Completed', label: '✅ เสร็จสิ้น (Completed)', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' }
 ]
 
+const escapeHtml = (value: unknown) => String(value ?? '').replace(/[&<>"']/g, (character) => ({
+  '&': '&amp;',
+  '<': '&lt;',
+  '>': '&gt;',
+  '"': '&quot;',
+  "'": '&#39;'
+}[character] || character))
+
 export default function RepairTable() {
+  const supabase = createClient()
   const [repairs, setRepairs] = useState<any[]>([])
+  const [users, setUsers] = useState<{ id: number; full_name: string; Job_position?: string | null }[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
 
@@ -60,8 +72,24 @@ export default function RepairTable() {
     }
   }
 
+  const fetchUsers = async () => {
+    const { data, error } = await supabase
+      .from('users')
+      .select('id, full_name, Job_position')
+      .eq('role', 'admin')
+      .order('full_name')
+
+    if (error) {
+      console.error('Error fetching repair inspectors:', error)
+      return
+    }
+
+    setUsers(data || [])
+  }
+
   useEffect(() => {
     fetchRepairs()
+    fetchUsers()
   }, [])
 
   const openModal = (repair: any) => {
@@ -213,7 +241,11 @@ export default function RepairTable() {
           <label>1. อนุมัติเลขที่:</label> <input id="swal-input-approve" class="swal2-input" placeholder="420/2569">
           <label>2. อนุมัติเลขที่ 2:</label> <input id="swal-input-approve02" class="swal2-input" placeholder="420/2569">
           <label>3. วันที่อนุมัติ:</label> <input id="swal-input-date" class="swal2-input" type="date">
-          <label>4. ผู้ตรวจรับ:</label> <input id="swal-input-amount" class="swal2-input" type="number" placeholder="0.00" value="${repair.service_price || ''}">
+          <label>4. ผู้ตรวจรับ:</label>
+          <select id="swal-input-inspector" class="swal2-input">
+            <option value="">-- เลือกชื่อพนักงานผู้ตรวจรับ --</option>
+            ${users.map((user) => `<option value="${escapeHtml(user.id)}" ${String(repair.technician_id || '') === String(user.id) ? 'selected' : ''}>${escapeHtml(user.full_name)} (${escapeHtml(user.Job_position || '')})</option>`).join('')}
+          </select>
           <label>5. เงินไม่รวม VAT (บาท):</label> <input id="swal-input-amount" class="swal2-input" type="number" placeholder="0.00" value="${repair.service_price || ''}">
           <label>6. VAT 7%:</label> <input id="swal-input-vat" class="swal2-input" readonly style="background-color: #eee;">
           <label>7. ยอดรวม:</label> <input id="swal-input-total" class="swal2-input" readonly style="background-color: #eee;">
@@ -250,10 +282,15 @@ export default function RepairTable() {
         }
       },
       preConfirm: () => {
+    const inspectorSelect = document.getElementById('swal-input-inspector') as HTMLSelectElement | null
+    const selectedInspector = users.find((user) => String(user.id) === inspectorSelect?.value)
+
     return {
         approveId: (document.getElementById('swal-input-approve') as HTMLInputElement)?.value || '',
         approveNo02: (document.getElementById('swal-input-approve02') as HTMLInputElement)?.value || '',
         date: (document.getElementById('swal-input-date') as HTMLInputElement)?.value || '',
+        inspectorName: selectedInspector?.full_name || '',
+        inspectorPosition: selectedInspector?.Job_position || '',
         amount: (document.getElementById('swal-input-amount') as HTMLInputElement)?.value || '',
         vat: (document.getElementById('swal-input-vat') as HTMLInputElement)?.value || '',
         total: (document.getElementById('swal-input-total') as HTMLInputElement)?.value || '',
@@ -266,6 +303,95 @@ export default function RepairTable() {
 
     if (formValues) {
       generateApprovalPDF(repair, formValues);
+    }
+  };
+
+  const handleProcurementPdfWithSwal = async (repair: any) => {
+    const { value: formValues } = await Swal.fire({
+      title: 'บันทึกรายละเอียดรายงานขออนุมัติ',
+      html: `
+        <style>
+          .swal-form-grid {
+            display: grid;
+            grid-template-columns: 150px 1fr;
+            gap: 10px;
+            align-items: center;
+            text-align: left;
+            font-family: 'Sarabun', sans-serif;
+            font-size: 14px;
+          }
+          .swal-form-grid label { font-weight: bold; }
+          .swal-form-grid input, .swal-form-grid select {
+            height: 35px !important;
+            margin: 0 !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
+          }
+        </style>
+        <div class="swal-form-grid">
+          <label>1. เงินไม่รวม VAT (บาท):</label> <input id="swal-input-amount" class="swal2-input" type="number" placeholder="0.00" value="${repair.service_price || ''}">
+          <label>2. VAT 7%:</label> <input id="swal-input-vat" class="swal2-input" readonly style="background-color: #eee;">
+          <label>3. ยอดรวม:</label> <input id="swal-input-total" class="swal2-input" readonly style="background-color: #eee;">
+          <label>4. ยอดตัวอักษร:</label> <input id="swal-input-total-text" class="swal2-input" readonly style="background-color: #eee;">
+          <label>5. รหัสบัญชี:</label> <input id="swal-input-account-code" class="swal2-input" value="53051060">
+          <label>6. ศูนย์ต้นทุน:</label> <input id="swal-input-cost-center" class="swal2-input" value="E301023000">
+          <label>7. ผู้ตรวจรับ:</label>
+          <select id="swal-input-inspector" class="swal2-input">
+            <option value="">-- เลือกชื่อพนักงานผู้ตรวจรับ --</option>
+            ${users.map((user) => `<option value="${escapeHtml(user.id)}" ${String(repair.technician_id || '') === String(user.id) ? 'selected' : ''}>${escapeHtml(user.full_name)} (${escapeHtml(user.Job_position || '')})</option>`).join('')}
+          </select>
+          
+        </div>
+      `,
+      focusConfirm: false,
+      showCancelButton: true,
+      confirmButtonText: 'สร้าง PDF',
+      didOpen: () => {
+        const amountInput = document.getElementById('swal-input-amount') as HTMLInputElement;
+        const vatInput = document.getElementById('swal-input-vat') as HTMLInputElement;
+        const totalInput = document.getElementById('swal-input-total') as HTMLInputElement;
+        const totalTextInput = document.getElementById('swal-input-total-text') as HTMLInputElement;
+
+        if (amountInput) {
+          amountInput.addEventListener('input', () => {
+            const amount = parseFloat(amountInput.value) || 0;
+            const vat = amount * 0.07;
+            const total = amount + vat;
+            const vatRounded = Math.round(vat);
+            const totalRounded = Math.round(total);
+
+            vatInput.value = vatRounded.toLocaleString('en-US');
+            totalInput.value = totalRounded.toLocaleString('en-US');
+            totalTextInput.value = thaiBaht(totalRounded);
+          });
+
+          if (amountInput.value) {
+            amountInput.dispatchEvent(new Event('input'));
+          }
+        }
+      },
+      preConfirm: () => {
+    const inspectorSelect = document.getElementById('swal-input-inspector') as HTMLSelectElement | null
+    const selectedInspector = users.find((user) => String(user.id) === inspectorSelect?.value)
+
+    return {
+        approveId: (document.getElementById('swal-input-approve') as HTMLInputElement)?.value || '',
+        approveNo02: (document.getElementById('swal-input-approve02') as HTMLInputElement)?.value || '',
+        date: (document.getElementById('swal-input-date') as HTMLInputElement)?.value || '',
+        inspectorName: selectedInspector?.full_name || '',
+        inspectorPosition: selectedInspector?.Job_position || '',
+        amount: (document.getElementById('swal-input-amount') as HTMLInputElement)?.value || '',
+        vat: (document.getElementById('swal-input-vat') as HTMLInputElement)?.value || '',
+        total: (document.getElementById('swal-input-total') as HTMLInputElement)?.value || '',
+        totalText: (document.getElementById('swal-input-total-text') as HTMLInputElement)?.value || '',
+        accountCode: (document.getElementById('swal-input-account-code') as HTMLInputElement)?.value || '',
+        costCenter: (document.getElementById('swal-input-cost-center') as HTMLInputElement)?.value || '',
+    }
+}
+    });
+
+    if (formValues) {
+      generateProcurementPDF(repair, formValues);
     }
   };
 
@@ -623,7 +749,12 @@ export default function RepairTable() {
                         >
                           🖨️ ต.จ.6 ป.61
                         </button>
-
+                        <button
+                          onClick={() => handleProcurementPdfWithSwal(repair)}
+                          className="bg-slate-50 text-slate-600 hover:bg-slate-100 px-2 py-1.5 rounded text-[10px] font-bold border border-slate-300 whitespace-nowrap w-full"
+                        >
+                          🖨️ จัดซื่อจัดจ้าง
+                        </button>
 
                         <button
                           onClick={() => generateRepairPDFquick(repair)}

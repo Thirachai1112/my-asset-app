@@ -104,7 +104,7 @@ export function thaiBaht(number: any) {
 }
 
 export async function handleFinishAndGeneratePDF(repair: RepairData) {
-    const defaultPrice = repair.service_price || 2420;
+    const defaultPrice = Number(repair.service_price ?? 2420);
 
     const { value: formValues } = await Swal.fire({
         title: 'บันทึกรายละเอียดรายงานขอจัดซ่อม',
@@ -124,7 +124,7 @@ export async function handleFinishAndGeneratePDF(repair: RepairData) {
                 <label>วันที่อนุมัติ:</label> 
                 <input id="swal-input-date" class="swal2-input" type="date">
                 
-                <label>เงินไม่รวม VAT:</label> 
+                <label>เงินรวม VAT:</label> 
                 <input id="swal-input-amount" class="swal2-input" type="number" value="${defaultPrice}">
             </div>`,
         focusConfirm: false,
@@ -149,6 +149,8 @@ export const generateApprovalPDF = async (repair: RepairData, formValues?: any) 
     const approveNo = formValues?.approveId || "1496/2569";
     const approve = formValues?.approveNo02 || "1408/2569";
     const locationName = formValues?.location || "กฟส.หนองกุงศรี";
+    const inspectorName = formValues?.inspectorName || "ผู้ตรวจรับ";
+    const inspectorPosition = formValues?.inspectorPosition || "";
     const accountCode = formValues?.accountCode || "53051060";
     const costCenter = formValues?.costCenter || "E301023000";
 
@@ -170,9 +172,10 @@ export const generateApprovalPDF = async (repair: RepairData, formValues?: any) 
     }
     // -----------------------------------------------------------------
 
-    const amountVal = Number(formValues?.amount || 2420);
-    const vatVal = Math.round(amountVal * 0.07 * 100) / 100;
-    const totalVal = amountVal + vatVal;
+    const amountVal = Number(formValues?.amount ?? repair.service_price ?? 2420);
+    const amountBeforeVat = Number.isFinite(amountVal) && amountVal > 0 ? amountVal / 1.07 : 0;
+    const vatVal = Number.isFinite(amountBeforeVat) ? Math.round((amountBeforeVat * 0.07) * 100) / 100 : 0;
+    const totalVal = amountVal;
     const totalText = thaiBaht(totalVal);
     
     if (!await loadFont(doc, "THSarabunNew")) {
@@ -298,9 +301,16 @@ export const generateApprovalPDF = async (repair: RepairData, formValues?: any) 
     doc.text("คำสั่งเลขที่ ฉ.2 กดส.(พ.)01/2569 ลงวันที่ 5 มกราคม 2569", leftX, leftY);
     leftY += 5.5;
     doc.text("เป็นผู้ตรวจรับการจัดซ่อม/จัดจ้าง ในวาระนี้.-", leftX, leftY);
-    leftY += 20;
+    leftY += 29;
     doc.text("......................................................", leftX + 23, leftY);
-    leftY += 21;
+    leftY += 6.5;
+    doc.text(`(${inspectorName})`, leftX + 47, leftY, { align: "center" });
+    if (inspectorPosition) {
+        leftY += 6.5;
+        doc.text(inspectorPosition, leftX + 47, leftY, { align: "center" });
+        leftY += 5.5;
+    doc.text("วันที่ ................................................", leftX + 23, leftY);
+    }
    
 
     // ==========================================
@@ -337,10 +347,10 @@ export const generateApprovalPDF = async (repair: RepairData, formValues?: any) 
     doc.text(`ด้วย ผคข.กดส.ฉ.2 มีความประสงค์จัดซ่อมเครื่องคอมพิวเตอร์ ซึ่งเป็นอุปกรณ์ใช้งานที่ ${locationName} ดำเนินการแล้ว`, startX + 9, bottomBoxY + 12);
     doc.text("ปรากฏว่ามีค่าใช้จ่ายตามรายการ ดังต่อไปนี้", startX + 3, bottomBoxY + 18);
 
-    doc.text(`1. ค่าซ่อมเครื่องคอม ${repair.fix_detail || '-'} `, startX + 10, bottomBoxY + 24);
+    doc.text(`1. ค่าซ่อม ${repair.item?.type_item || "ไม่ระบุ"} ${repair.fix_detail || '-'} `, startX + 10, bottomBoxY + 24);
     doc.text(`จำนวน 1 เครื่อง`, startX + 90, bottomBoxY + 24);
     doc.text("เป็นเงิน", 130, bottomBoxY + 24);
-    doc.text(`${amountVal.toLocaleString('en-US', { minimumFractionDigits: 2 })}`, 175, bottomBoxY + 22, { align: "right" });
+    doc.text(`${amountBeforeVat.toLocaleString('en-US', { minimumFractionDigits: 2 })}`, 175, bottomBoxY + 22, { align: "right" });
     doc.text("บาท", 190, bottomBoxY + 22);
 
     doc.text("ภาษี 7%", startX + 90, bottomBoxY + 29);

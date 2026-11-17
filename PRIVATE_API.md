@@ -1,9 +1,18 @@
 # Private API (`/api/private/*`)
 
+## Supabase setup
+
+ข้อมูลของ Private API จัดเก็บใน Supabase PostgreSQL และ Supabase Storage เท่านั้น
+
+- ใช้ `NEXT_PUBLIC_SUPABASE_URL` และ `SUPABASE_SERVICE_ROLE_KEY` ฝั่ง server เท่านั้น ห้ามส่ง service role key ไปยัง browser
+- รัน migration `supabase/migrations/20261116000000_private_api.sql` ใน Supabase ก่อนเรียก API กลุ่มนี้
+- Private API ใช้ service role เพื่อเข้าถึงตารางที่เปิด Row Level Security และยังตรวจ allowlist IP ก่อนทำงาน
+- ให้ reverse proxy กำหนด `x-real-ip` หรือ `x-forwarded-for` ใหม่จาก connection จริง ห้ามส่งต่อค่าที่ผู้เรียกกำหนดเอง
+
 ## Authentication
 
 ไม่ใช้ JWT — เช็คจาก **source IP** เท่านั้น
-ออกแบบมาสำหรับ internal webserver อีกตัวที่แชร์ database เดียวกัน ไม่ใช่ end user — ฝั่งที่เรียกไม่ต้องแนบ token/header ใดๆ เพิ่ม แค่ยิงจาก IP ที่อยู่ใน allowlist
+ออกแบบมาสำหรับ internal webserver อีกตัวที่เรียก Supabase ผ่านแอปนี้ ไม่ใช่ end user — ฝั่งที่เรียกไม่ต้องแนบ token/header ใดๆ เพิ่ม แค่ยิงจาก IP ที่อยู่ใน allowlist
 
 เพราะไม่มี `req.user`:
 - audit log ทุกจุดจะบันทึก `user_id: null`, `user_name: 'Unknown'`

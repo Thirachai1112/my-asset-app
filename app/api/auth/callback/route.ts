@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
-import { createClient } from '@/utils/supabase/server'
 import { createClient as createSupabaseAdmin } from '@supabase/supabase-js'
 
 export async function POST(request: Request) {
@@ -27,7 +26,9 @@ export async function POST(request: Request) {
     const userInfoUrl = process.env.SSO_USERINFO_URL || 'https://sso.pea.co.th/oauth2/userinfo'
     const clientId = process.env.client_id
     const clientSecret = process.env.client_secret
-    const redirectUri = process.env.REDIRECT_URI_CALLBACK || 'http://localhost:3000/login/callback'
+    const requestUrl = new URL(request.url)
+    const appOrigin = (process.env.NEXT_PUBLIC_APP_URL || requestUrl.origin).replace(/\/$/, '')
+    const redirectUri = process.env.REDIRECT_URI_CALLBACK || `${appOrigin}/login/callback`
 
     if (!clientId || !clientSecret) {
       return NextResponse.json({
@@ -98,16 +99,22 @@ export async function POST(request: Request) {
       { auth: { persistSession: false } }
     )
 
-    // ค้นหาข้อมูลพนักงานด้วย .maybeSingle() เพื่อไม่ให้เกิด Error กรณีไม่พบข้อมูล
-    let { data: userData, error: dbError } = await supabaseAdmin
+    // Match the employee code exactly and tolerate legacy duplicate rows.
+    const userQuery = await supabaseAdmin
       .from('users')
       .select('*')
-      .ilike('emp_code', empCode)
+      .eq('emp_code', empCode)
+      .limit(1)
       .maybeSingle()
+    let userData = userQuery.data
+    const dbError = userQuery.error
 
     if (dbError) {
-      console.error(`[SSO Callback] Database query error for "${empCode}":`, dbError)
-      return NextResponse.json({ success: false, error: 'Database error occurred' }, { status: 500 })
+      console.error(`[SSO Callback] Database query error for "${empCode}" [${dbError.code ?? 'unknown'}]:`, dbError.message)
+      return NextResponse.json({
+        success: false,
+        error: `Database query failed${dbError.code ? ` (${dbError.code})` : ''}`
+      }, { status: 500 })
     }
 
     // ถ้ายังไม่มีข้อมูลในระบบ ให้ระบบทำการลงทะเบียน (Insert) ให้อัตโนมัติทันที
@@ -144,7 +151,7 @@ export async function POST(request: Request) {
       path: '/',
       maxAge: 60 * 60 * 24, // 24 hours
       httpOnly: true,
-      secure: false,
+      secure: requestUrl.protocol === 'https:',
       sameSite: 'lax'
     })
 
@@ -160,8 +167,9 @@ export async function POST(request: Request) {
       }
     })
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[SSO Callback] Server error:', error)
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 })
+    const message = error instanceof Error ? error.message : 'Unknown error'
+    return NextResponse.json({ success: false, error: message }, { status: 500 })
   }
 }

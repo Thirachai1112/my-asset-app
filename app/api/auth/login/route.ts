@@ -10,7 +10,8 @@ export async function GET(request: Request) {
     // Auto-detect redirect URI to handle both localhost and IP addresses (e.g. 172.21.200.101)
     const reqUrl = new URL(request.url)
     const currentOrigin = `${reqUrl.protocol}//${reqUrl.host}`
-    const redirectUri = process.env.REDIRECT_URI_CALLBACK || `${currentOrigin}/login/callback`
+    const appOrigin = (process.env.NEXT_PUBLIC_APP_URL || currentOrigin).replace(/\/$/, '')
+    const redirectUri = process.env.REDIRECT_URI_CALLBACK || `${appOrigin}/login/callback`
 
     if (!clientId) {
       console.error('[SSO Login] client_id is missing in environment variables')
@@ -20,13 +21,13 @@ export async function GET(request: Request) {
     // Generate a secure state token for CSRF protection
     const state = crypto.randomUUID()
 
-    // Save state in a secure cookie (valid for 5 minutes)
+    // Save state in a cookie that matches the protocol used by the browser.
     const cookieStore = await cookies()
     cookieStore.set('oauth_state', state, {
       path: '/',
       maxAge: 60 * 5, // 5 minutes
       httpOnly: true,
-      secure: true, // Always secure since they run HTTPS
+      secure: reqUrl.protocol === 'https:',
       sameSite: 'lax'
     })
 
@@ -42,8 +43,9 @@ export async function GET(request: Request) {
     console.log('[SSO Login] Redirecting to:', redirectUrl)
 
     return NextResponse.redirect(redirectUrl)
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[SSO Login] Error initiating login flow:', error)
-    return NextResponse.json({ error: 'Internal Server Error', message: error.message }, { status: 500 })
+    const message = error instanceof Error ? error.message : 'Unknown error'
+    return NextResponse.json({ error: 'Internal Server Error', message }, { status: 500 })
   }
 }
