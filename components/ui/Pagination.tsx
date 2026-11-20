@@ -3,6 +3,8 @@
 // ============================================
 'use client'
 
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react'
+
 interface PaginationProps {
   currentPage: number
   totalPages: number
@@ -10,6 +12,9 @@ interface PaginationProps {
   indexOfFirstItem: number
   indexOfLastItem: number
   onPageChange: (page: number) => void
+  pageSize?: number
+  pageSizeOptions?: number[]
+  onPageSizeChange?: (pageSize: number) => void
 }
 
 export default function Pagination({
@@ -19,48 +24,74 @@ export default function Pagination({
   indexOfFirstItem,
   indexOfLastItem,
   onPageChange,
+  pageSize,
+  pageSizeOptions,
+  onPageSizeChange,
 }: PaginationProps) {
-  if (totalPages <= 1) return null
+  if (totalItems === 0) return null
+
+  const firstItem = totalItems === 0 ? 0 : indexOfFirstItem + 1
+  const lastItem = Math.min(indexOfLastItem, totalItems)
 
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mt-4 px-2 gap-3">
-      <p className="text-xs text-slate-500 text-center sm:text-left">
-        แสดง {indexOfFirstItem + 1} ถึง {Math.min(indexOfLastItem, totalItems)} จากทั้งหมด{' '}
-        {totalItems} รายการ
+    <div className="mt-4 flex flex-col items-end gap-3 px-2 sm:flex-row sm:justify-end sm:gap-5">
+      {pageSize && onPageSizeChange && pageSizeOptions?.length ? (
+        <div className="flex items-center gap-2 text-xs text-slate-500">
+          <span className="whitespace-nowrap">Rows per page:</span>
+          <select
+            value={pageSize}
+            onChange={(event) => onPageSizeChange(Number(event.target.value))}
+            className="rounded-md border border-slate-200 bg-white px-2 py-1.5 text-xs font-medium text-slate-700 outline-none focus:border-violet-400"
+          >
+            {pageSizeOptions.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        </div>
+      ) : null}
+
+      <p className="whitespace-nowrap text-xs text-slate-500">
+        {firstItem}-{lastItem} of {totalItems}
       </p>
 
-      <div className="flex items-center justify-center space-x-1.5">
+      <div className="flex items-center gap-1">
+        <button
+          type="button"
+          onClick={() => onPageChange(1)}
+          disabled={currentPage === 1}
+          aria-label="หน้าแรก"
+          className="flex h-8 w-8 items-center justify-center text-violet-600 transition-colors hover:text-violet-800 disabled:text-slate-300"
+        >
+          <ChevronsLeft size={16} />
+        </button>
         <button
           type="button"
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
-          className="px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-medium bg-white hover:bg-slate-50 text-slate-600 transition-colors disabled:opacity-40 disabled:hover:bg-white"
+          aria-label="หน้าก่อนหน้า"
+          className="flex h-8 w-8 items-center justify-center text-violet-600 transition-colors hover:text-violet-800 disabled:text-slate-300"
         >
-          ก่อนหน้า
+          <ChevronLeft size={17} />
         </button>
-
-        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-          <button
-            key={page}
-            type="button"
-            onClick={() => onPageChange(page)}
-            className={`w-7 h-7 flex items-center justify-center border rounded-lg text-xs font-semibold transition-colors ${
-              currentPage === page
-                ? 'bg-[#7c3aed] border-[#7c3aed] text-white shadow-sm'
-                : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-            }`}
-          >
-            {page}
-          </button>
-        ))}
-
         <button
           type="button"
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage === totalPages}
-          className="px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-medium bg-white hover:bg-slate-50 text-slate-600 transition-colors disabled:opacity-40 disabled:hover:bg-white"
+          aria-label="หน้าถัดไป"
+          className="flex h-8 w-8 items-center justify-center text-violet-600 transition-colors hover:text-violet-800 disabled:text-slate-300"
         >
-          ถัดไป
+          <ChevronRight size={17} />
+        </button>
+        <button
+          type="button"
+          onClick={() => onPageChange(totalPages)}
+          disabled={currentPage === totalPages}
+          aria-label="หน้าสุดท้าย"
+          className="flex h-8 w-8 items-center justify-center text-violet-600 transition-colors hover:text-violet-800 disabled:text-slate-300"
+        >
+          <ChevronsRight size={16} />
         </button>
       </div>
     </div>
